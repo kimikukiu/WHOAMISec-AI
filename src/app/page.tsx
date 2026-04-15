@@ -529,7 +529,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                   {
                     icon: <Rocket className="h-5 w-5" />,
                     label: 'Deploy Ready',
-                    value: deployStatus ? `${deployStatus.ready_count || 0}/9` : '—',
+                    value: deployStatus ? `${deployStatus.summary?.ok || 0}/${deployStatus.summary?.total || 9}` : '—',
                     color: 'text-blue-400',
                   },
                   {
@@ -607,7 +607,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                       <div className="space-y-0">
                         {botMessages.map((m, i) => (
                           <div key={i} className="flex gap-3 py-2.5 border-b border-slate-800 last:border-0">
-                            <span className="text-blue-400 font-semibold text-xs min-w-[50px]">{m.from}</span>
+                            <span className="text-blue-400 font-semibold text-xs min-w-[50px]">{typeof m.from === 'object' ? m.from?.name || m.from?.username || '?' : m.from}</span>
                             <span className="text-slate-300 text-xs flex-1 break-all">{m.text}</span>
                             <span className="text-slate-600 text-[10px] whitespace-nowrap">
                               {m.date?.split('T')[1]?.slice(0, 5) || ''}
@@ -677,7 +677,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                       <div className="space-y-0">
                         {botMessages.map((m, i) => (
                           <div key={i} className="flex gap-3 py-2.5 border-b border-slate-800 last:border-0">
-                            <span className="text-blue-400 font-semibold text-xs min-w-[50px]">{m.from}</span>
+                            <span className="text-blue-400 font-semibold text-xs min-w-[50px]">{typeof m.from === 'object' ? m.from?.name || m.from?.username || '?' : m.from}</span>
                             <span className="text-slate-300 text-xs flex-1 break-all">{m.text}</span>
                             <span className="text-slate-600 text-[10px] whitespace-nowrap">
                               {m.date?.split('T')[1]?.slice(0, 5) || ''}
