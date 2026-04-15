@@ -266,7 +266,10 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     try {
       const res = await fetch('/api/files');
       const data = await res.json();
-      setFiles(data);
+      setFiles({
+        downloads: Array.isArray(data.downloads) ? data.downloads : data.downloads?.files || [],
+        generated: Array.isArray(data.generated) ? data.generated : data.generated_code?.files || [],
+      });
     } catch {}
   }, []);
 
