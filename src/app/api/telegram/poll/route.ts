@@ -9,72 +9,134 @@ function getPollOffset(): number {
   try {
     const path = join(process.cwd(), POLL_OFFSET_FILE);
     if (existsSync(path)) {
-      return JSON.parse(readFileSync(path, 'utf-8')).offset || 0;
+      return JSON.parse(readFileSync(path, 'utf-8')).offset || -1;
     }
   } catch {}
-  return 0;
+  return -1;
 }
 
 function savePollOffset(offset: number) {
   writeFileSync(join(process.cwd(), POLL_OFFSET_FILE), JSON.stringify({ offset }), 'utf-8');
 }
 
-export async function POST(request: NextRequest) {
+// ─── Auto-poll state ───
+let autoPollRunning = false;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+async function pollOnce(token: string, longPoll = false): Promise<{ processed: number; errors: number; total: number }> {
   try {
-    const config = loadConfig();
-    if (!config.telegram_token) {
-      return NextResponse.json({ error: 'No token' }, { status: 400 });
-    }
-
-    const token = config.telegram_token;
     const offset = getPollOffset();
-    const baseUrl = request.headers.get('x-forwarded-host')
-      ? `https://${request.headers.get('x-forwarded-host')}`
-      : process.env.NEXT_PUBLIC_BASE_URL || '';
+    const timeoutSec = longPoll ? 15 : 3;
+    const url = `https://api.telegram.org/bot${token}/getUpdates?limit=100&offset=${offset}&timeout=${timeoutSec}&allowed_updates=["message","callback_query"]`;
 
-    // Get pending updates
-    const url = `https://api.telegram.org/bot${token}/getUpdates?limit=10&offset=${offset}&timeout=0&allowed_updates=["message"]`;
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), (timeoutSec + 5) * 1000);
+
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     const data = await res.json();
 
-    if (!data.ok) {
-      return NextResponse.json({ error: data.description }, { status: 502 });
-    }
+    if (!data.ok) return { processed: 0, errors: 0, total: 0 };
 
     const updates = data.result || [];
     let processed = 0;
 
-    // Process each update by forwarding to our webhook handler
     for (const update of updates) {
       try {
-        const webhookUrl = baseUrl
-          ? `${baseUrl}/api/telegram/webhook`
-          : `http://localhost:3000/api/telegram/webhook`;
-
-        await fetch(webhookUrl, {
+        await fetch('http://localhost:3000/api/telegram/webhook', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(update),
         });
         processed++;
       } catch (e: any) {
-        console.error('Failed to process update:', e.message);
+        console.error('[poll] Forward error:', e.message);
       }
     }
 
-    // Update offset
     if (updates.length > 0) {
       const maxOffset = Math.max(...updates.map((u: any) => u.update_id));
       savePollOffset(maxOffset + 1);
+      console.log(`[poll] Processed ${processed}/${updates.length} updates`);
     }
 
-    return NextResponse.json({
-      success: true,
-      processed,
-      total: updates.length,
-      offset: updates.length > 0 ? Math.max(...updates.map((u: any) => u.update_id)) + 1 : offset,
-    });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return { processed, errors: 0, total: updates.length };
+  } catch (e: any) {
+    if (e.name === 'AbortError') return { processed: 0, errors: 0, total: 0 };
+    console.error('[poll] Error:', e.message);
+    return { processed: 0, errors: 1, total: 0 };
   }
+}
+
+// GET - check poll status
+export async function GET() {
+  return NextResponse.json({
+    auto_polling: autoPollRunning,
+    status: autoPollRunning ? 'running' : 'stopped',
+    message: autoPollRunning
+      ? 'Bot is auto-polling. Messages are processed within ~5s.'
+      : 'POST to poll once, or POST with {"auto":true} to start auto-polling.',
+  });
+}
+
+export async function POST(request: NextRequest) {
+  const config = loadConfig();
+  if (!config.telegram_token) {
+    return NextResponse.json({ error: 'No token' }, { status: 400 });
+  }
+  const token = config.telegram_token;
+
+  // Check if auto-poll request
+  const body = await request.json().catch(() => ({}));
+
+  if (body.auto === true || body.auto === 'start') {
+    if (autoPollRunning) {
+      return NextResponse.json({ status: 'already_running', message: 'Auto-poll already active.' });
+    }
+
+    // Delete webhook to enable getUpdates
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`);
+      console.log('[poll] Webhook deleted, switching to long-polling');
+    } catch {}
+
+    autoPollRunning = true;
+
+    // Immediate first poll
+    const firstPoll = await pollOnce(token, true);
+
+    // Start interval polling
+    pollTimer = setInterval(async () => {
+      if (!autoPollRunning) return;
+      await pollOnce(token, true);
+    }, 3000);
+
+    console.log('[poll] AUTO-POLL STARTED - interval 3s');
+
+    return NextResponse.json({
+      status: 'started',
+      auto_polling: true,
+      first_poll: firstPoll,
+      message: 'Auto-polling started! Bot responds within ~5s.',
+    });
+  }
+
+  if (body.auto === 'stop' || body.auto === false) {
+    autoPollRunning = false;
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    console.log('[poll] AUTO-POLL STOPPED');
+    return NextResponse.json({ status: 'stopped', auto_polling: false });
+  }
+
+  // Single poll (backward compatible)
+  if (autoPollRunning) {
+    return NextResponse.json({ status: 'auto_polling', message: 'Auto-poll is active.', processed: 0 });
+  }
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`);
+  } catch {}
+
+  const result = await pollOnce(token, false);
+  return NextResponse.json({ success: true, ...result });
 }
