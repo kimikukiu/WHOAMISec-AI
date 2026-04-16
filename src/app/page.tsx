@@ -427,7 +427,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       const res = await fetch('/api/glm/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: msg }),
+        body: JSON.stringify({ prompt: msg, model: glmModel, reasoning: agentReasoning, memory: agentMemory, cots: agentCots }),
       });
       const data = await res.json();
       if (data.response) {

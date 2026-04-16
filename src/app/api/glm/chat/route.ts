@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadConfig } from '@/lib/config';
+import { callAI } from '@/lib/ai-engine';
 
 // Agent system prompts by model family
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
@@ -48,65 +49,71 @@ export async function POST(request: NextRequest) {
     if (capabilities.length > 0) systemPrompt += `\n\nActive agent capabilities: ${capabilities.join(', ')}.`;
     systemPrompt += '\n\nYou are HERMES BOT v4.0 Expert Edition powered by OpenCode + Hermes Agent. You can operate in multiple modes: coding, analysis, creative writing, problem solving, and conversation.';
 
-    // Use z-ai-web-dev-sdk (always works, no external API key needed)
+    // Use shared AI engine (z-ai-web-dev-sdk via dynamic import)
     try {
-      const ZAI = require('z-ai-web-dev-sdk').default || require('z-ai-web-dev-sdk');
-      const zai = await ZAI.create();
+      const messages = [
+        { role: 'system' as const, content: systemPrompt },
+        { role: 'user' as const, content: prompt },
+      ];
 
-      const completion = await zai.chat.completions.create({
-        model: model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: model.includes('queen') ? 8192 : 4096,
-      });
-
-      const reply = completion.choices?.[0]?.message?.content || 'No response generated.';
-      const usedModel = completion.model || model;
+      const reply = await callAI(messages, model);
 
       return NextResponse.json({
         success: true,
         response: reply,
-        model: usedModel,
-        provider: getProvider(usedModel),
-        usage: completion.usage || null,
+        model: model,
+        provider: getProvider(model),
         engine: 'z-ai-web-dev-sdk',
       });
     } catch (sdkError: any) {
-      // Fallback: try raw API if SDK fails
+      // Fallback: try direct API call
       const endpoint = config.glm_endpoint || 'https://api.z.ai/api/coding/paas/v4/chat/completions';
       const apiKey = config.glm_api_key;
       if (apiKey) {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: prompt },
-            ],
-            temperature: 0.7,
-            max_tokens: 4096,
-          }),
-        });
-        const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || 'No response generated.';
-        return NextResponse.json({
-          success: true,
-          response: reply,
-          model: data.model || model,
-          provider: getProvider(model),
-          usage: data.usage || null,
-          engine: 'direct-api',
-        });
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: prompt },
+              ],
+              temperature: 0.7,
+              max_tokens: 4096,
+            }),
+          });
+          const data = await response.json();
+          if (data.choices?.[0]?.message?.content) {
+            const reply = data.choices[0].message.content;
+            return NextResponse.json({
+              success: true,
+              response: reply,
+              model: data.model || model,
+              provider: getProvider(model),
+              usage: data.usage || null,
+              engine: 'direct-api',
+            });
+          }
+          return NextResponse.json({
+            success: false,
+            error: 'Direct API returned no response',
+            api_error: data.error || data,
+          }, { status: 502 });
+        } catch (apiError: any) {
+          return NextResponse.json({
+            success: false,
+            error: 'Both SDK and direct API failed',
+            sdk_error: sdkError.message,
+            api_error: apiError.message,
+          }, { status: 502 });
+        }
       }
 
       return NextResponse.json({
         success: false,
-        error: 'Both SDK and direct API failed',
+        error: 'AI SDK failed and no API key configured as fallback',
         sdk_error: sdkError.message,
       }, { status: 502 });
     }

@@ -52,7 +52,8 @@ const SESSIONS_DIR = join(process.cwd(), 'data', 'sessions');
 const DOWNLOADS_DIR = join(process.cwd(), 'downloads');
 const GENERATED_DIR = join(process.cwd(), 'generated_code');
 const HERMES_VENV = '/home/z/hermes-agent-install/.venv';
-const HERMES_BIN = '/home/z/hermes-agent-install/.venv/bin/hermes';
+const HERMES_BIN = '/home/z/hermes-agent-install/.venv/bin/hermes-agent';
+const OPENCODE_BIN = '/home/z/.npm-global/bin/opencode';
 
 function ensureDir(p: string) { if (!existsSync(p)) mkdirSync(p, { recursive: true }); }
 function getSessionPath(id: number) { ensureDir(SESSIONS_DIR); return join(SESSIONS_DIR, `${id}.json`); }
@@ -92,7 +93,8 @@ async function callOpenCode(prompt: string): Promise<string> {
   const { execFile } = await import('child_process');
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('OpenCode timeout')), 60000);
-    execFile('opencode', ['--print', prompt], {
+    const bin = existsSync(OPENCODE_BIN) ? OPENCODE_BIN : 'opencode';
+    execFile(bin, ['--print', prompt], {
       encoding: 'utf-8', timeout: 55000, maxBuffer: 10 * 1024 * 1024, cwd: process.cwd(),
     }, (err, stdout) => {
       clearTimeout(timeout);
@@ -107,7 +109,7 @@ async function callHermes(prompt: string): Promise<string> {
   const { execFile } = await import('child_process');
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Hermes timeout')), 90000);
-    const hermesPath = existsSync(HERMES_BIN) ? HERMES_BIN : 'hermes';
+    const hermesPath = existsSync(HERMES_BIN) ? HERMES_BIN : 'hermes-agent';
     const hermesEnv = { ...process.env, HERMES_HOME: '/home/z/hermes-agent-install/.hermes' };
     execFile(hermesPath, ['--print', prompt], {
       encoding: 'utf-8', timeout: 85000, maxBuffer: 10 * 1024 * 1024,
@@ -258,7 +260,7 @@ export async function POST(request: NextRequest) {
 
       case '/status': {
         const cr = config.glm_model?.startsWith('queen') ? '👑 ' : '';
-        const opencode = existsSync('/usr/local/bin/opencode') || existsSync('/usr/bin/opencode') ? '✅' : '⚠️';
+        const opencode = existsSync('/home/z/.npm-global/bin/opencode') ? '✅' : '⚠️';
         const hermes = existsSync(HERMES_BIN) ? '✅' : '⚠️';
         await sendMsg(token, chatId,
           `🤖 <b>Hermes Bot Agent v4.0</b>\n\n` +
@@ -432,5 +434,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'Hermes Bot Webhook Active', version: '4.0', models: Object.keys(AGENT_MODELS).length, opencode: existsSync('/usr/local/bin/opencode'), hermes: existsSync(HERMES_BIN) });
+  return NextResponse.json({ status: 'Hermes Bot Webhook Active', version: '4.0', models: Object.keys(AGENT_MODELS).length, opencode: existsSync(OPENCODE_BIN), hermes: existsSync(HERMES_BIN) });
 }
