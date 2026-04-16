@@ -1,7 +1,7 @@
 {
   "glm_api_key": "",
   "telegram_token": "8245053847:AAEHIS5UfcSRVP7iWVK4SedMEXxx9fceUVE",
-  "glm_model": "glm-5-turbo",
+  "glm_model": "hermes-4-405B",
   "glm_endpoint": "https://api.z.ai/api/coding/paas/v4/chat/completions",
   "github_repo": "https://github.com/kimikukiu/hermes-project-whoamisec",
   "auto_repair": "true",

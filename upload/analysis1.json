@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "### **1. Layout Structure**  \nThe Manus AI agent interface uses a **dark-themed, mobile-first design** with a hierarchical, card-based layout. The screen is divided into distinct sections: a top header, a main content area (split into a dropdown menu and a \"Get started\" card), and a bottom input bar. The overall structure prioritizes clarity and task-oriented workflows, with visual separation between configuration (top), onboarding (middle), and interaction (bottom) zones.  \n\n\n### **2. Tools/Actions Shown**  \n- **Agent Selection Dropdown**: A prominent dropdown at the top displays three agent tiers:  \n  - *Manus 1.6 Max* (high-performance for complex tasks)  \n  - *Manus 1.6* (versatile for most tasks)  \n  - *Manus 1.6 Lite* (lightweight for everyday tasks)  \n  The current selection (\"Manus 1.6 Lite\") is highlighted, with a downward chevron indicating expandability.  \n\n- **Connector Management**: A \"Connectors\" modal (second image) lists integrations with toggle switches:  \n  - Enabled: GitHub, Vercel, Cloudflare (blue toggles)  \n  - Disabled: My Browser, Gmail, Google Calendar, Google Drive, Outlook Mail (gray \"Connect\" buttons)  \n  - Actions: \"Add connectors\" (plus icon) and \"Manage connectors\" (settings icon) for further configuration.  \n\n- **Connected Apps Modal** (third image): Displays active integrations (GitHub, Vercel, Cloudflare) with descriptions (e.g., \"Manage repositories, track code changes...\") and right-facing arrows for deeper settings.  \n\n- **Input Bar Actions**: A bottom bar includes:  \n  - \"+\" button (likely for adding files/agents)  \n  - Avatar with \"+2\" (suggesting multi-user collaboration)  \n  - Chat bubble (text input)  \n  - Microphone (voice input)  \n  - Up arrow (send/submit)  \n\n\n### **3. Chat Interface**  \nThe chat interface is **minimalist and text-focused**, with a single input field at the bottom:  \n- Placeholder text: *\"Assign a task or ask anything\"*  \n- No visible chat history in the provided images, implying a clean, task-driven design (e.g., users start fresh with each interaction).  \n- Input is accompanied by voice (microphone) and send (up arrow) icons, supporting both text and voice commands.  \n\n\n### **4. File Browser**  \nNo explicit file browser is visible in the images. The interface prioritizes **agent selection** and **connector integrations** over file management, suggesting file access is handled via connected apps (e.g., GitHub, Google Drive) rather than a standalone browser.  \n\n\n### **5. Sidebar**  \nNo traditional sidebar exists. Instead, the interface uses **modals and dropdowns** for secondary actions:  \n- The \"Connectors\" modal (second image) slides in from the side, replacing the main content.  \n- The \"Connected Apps\" modal (third image) is a full-screen overlay with a close (X) button.  \nThis design keeps the primary workspace uncluttered while providing access to tools via contextual menus.  \n\n\n### **6. Status/Progress Indicators**  \n- **Top Right**: A star icon with \"300\" (likely credits, tokens, or usage limits) in a rounded badge.  \n- **Agent Dropdown**: Subtle gray text under each agent (e.g., \"High-performance agent designed for complex tasks\") provides context for selection.  \n- **Connectors Modal**: Blue toggle switches indicate enabled/disabled status; gray \"Connect\" buttons signal pending integration.  \n\n\n### **7. Code Editor/Terminal**  \nNo code editor or terminal is visible. The interface focuses on **agent configuration** and **task assignment**, with integrations (e.g., GitHub) handling code-related workflows externally.  \n\n\n### **8. Step-by-Step Workflow Display**  \nThe workflow is **task-oriented and linear**:  \n1. **Select an Agent**: Choose from Manus 1.6 tiers (dropdown).  \n2. **Configure Connectors**: Enable/disable integrations (e.g., GitHub, Vercel) via the \"Connectors\" modal.  \n3. **Assign a Task**: Use the bottom input bar to type or speak a request.  \n4. **Collaborate**: The \"+2\" avatar suggests multi-user task assignment or shared agent access.  \n\nOnboarding is emphasized with a \"Get started\" card (first image) promoting \"Claim your own agent\" (with social media icons: Telegram, LINE, Slack) to personalize the experience.  \n\n\n### **Overall Design Philosophy**  \nThe interface balances simplicity with power, using dark mode for readability, modals for focused actions, and clear visual hierarchy to guide users from agent selection to task execution. It prioritizes integrations (connectors) as the backbone of functionality, enabling users to leverage external tools (code, cloud, email) without cluttering the main workspace.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1776396224,
+  "id": "20260417112259308011408ce44ab8",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "20260417112259308011408ce44ab8",
+  "usage": {
+    "completion_tokens": 1047,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3979,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 5026
+  }
+}

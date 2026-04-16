@@ -114,3 +114,25 @@ Stage Summary:
 - z.ai API working via SDK (no manual key needed)
 - Bot menu configured with 19 commands
 - Universal Loop Coder with 12 languages and 5 Hermes tiers implemented
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Get Hermes Bot v4.0 LIVE and functional on Telegram
+
+Work Log:
+- Diagnosed issue: Next.js dev server kept dying after ~30s (container process management)
+- Created standalone bot-runner.mjs that polls Telegram independently
+- Created start-bot.sh with auto-restart loop for server + bot poller
+- Verified z-ai-web-dev-sdk is already integrated in ai-engine.ts (no manual API key)
+- Tested all command types: /start, /status, /models, /languages, AI chat
+- All 28 Telegram bot commands registered via setMyCommands
+- Server running 3+ minutes stable, bot poller active
+
+Stage Summary:
+- Bot is LIVE at http://localhost:3000 (proxied via Caddy on port 81)
+- All 26+ commands from tools-train-gpt.txt implemented in webhook route
+- AI calls use z-ai-web-dev-sdk (automatic authentication, no manual key)
+- RED TEAM training with 5 categories implemented
+- Loop Coder with 13 languages, 6 spark patterns, 5 tiers, 20 training prompts
+- Key files: start-bot.sh, bot-runner.mjs, src/app/api/telegram/webhook/route.ts

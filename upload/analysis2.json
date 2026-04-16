@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "The provided images depict a **Connectors modal interface** from the Manus AI agent, designed for integrating third-party applications. Below is an extreme detail breakdown of its elements:\n\n\n### **1. Layout Structure**  \nThe interface uses a **dark-themed, mobile-first design** with a modal overlay (occupying ~90% of the screen height) on a parent application. The layout is vertically stacked, with:  \n- A **header bar** at the top (containing a close button and title).  \n- A **tab navigation bar** below the header.  \n- A **scrollable list** of app connectors as the main content.  \n- A **consistent visual hierarchy** with rounded corners, subtle shadows, and high contrast (white text on dark gray backgrounds) for readability.  \n\n\n### **2. Tools/Actions Shown**  \nThe primary \"tool\" is the **Connectors modal**, which serves as a hub for app integrations. Key actions include:  \n- **Close Modal**: A white \"X\" icon in the top-left corner (to exit the modal).  \n- **Tab Navigation**: Three tabs—\"Apps\" (active, white background), \"Custom API\" (dark gray), \"Custom MCP\" (dark gray)—to switch between integration types.  \n- **App Selection**: Tappable cards for each app, each with an icon, name, and description.  \n- **Beta Indicators**: Some apps (e.g., Instagram, Meta Ads Manager) have a \"Beta\" tag, signaling experimental features.  \n- **Connection Status**: A green checkmark next to \"GitHub\" (visible in the second image) indicates an active integration.  \n\n\n### **3. Chat Interface**  \n**No chat interface is visible** in the provided images. The modal focuses exclusively on app connectors, with no text input fields, message bubbles, or chat history.  \n\n\n### **4. File Browser**  \n**No file browser is present**. The modal lists apps (e.g., Google Drive, GitHub) but does not display file/folder structures, search bars, or file previews.  \n\n\n### **5. Sidebar**  \n**No sidebar is visible**. The modal is a standalone overlay with no left/right side panels for navigation or additional tools.  \n\n\n### **6. Status/Progress Indicators**  \n- **Tab Selection**: The \"Apps\" tab is highlighted (white background) to show the active view.  \n- **Connection Status**: A green checkmark next to \"GitHub\" (second image) confirms an active integration.  \n- **Beta Tags**: \"Beta\" labels (e.g., Instagram, Meta Ads Manager) indicate experimental features.  \n- **Scroll Indicator**: A subtle scrollbar on the right (implied by the vertical list) shows the user can scroll through more apps.  \n\n\n### **7. Code Editor/Terminal**  \n**No code editor or terminal is visible**. The modal is purely for app integration setup, with no code snippets, syntax highlighting, or command-line interfaces.  \n\n\n### **8. Step-by-Step Workflow Display**  \n**No step-by-step workflow is shown**. The modal lists apps but does not display progress bars, task sequences, or guided setup steps.  \n\n\n### **Detailed Breakdown of Visible Elements**  \nEach app card follows a consistent structure:  \n- **Icon**: A square logo (e.g., Google Drive’s colorful triangle, GitHub’s octocat) with rounded corners.  \n- **Name**: Bold white text (e.g., \"Gmail\", \"Slack\").  \n- **Description**: Gray text (e.g., \"Draft replies, search your inbox, and summarize email threads instantly\") explaining the app’s functionality.  \n- **Beta Tag**: A small \"Beta\" label (gray background, white text) for experimental apps.  \n- **Connection Checkmark**: A green checkmark (only visible for \"GitHub\") indicating an active integration.  \n\n\n### **App List (By Image)**  \n- **First Image**: My Browser, Gmail, Google Calendar, Google Drive, Outlook Mail, Outlook Calendar, GitHub (partial).  \n- **Second Image**: GitHub (with checkmark), Instagram (Beta), Meta Ads Manager (Beta), Slack, Notion, Zapier.  \n- **Third Image**: Asana, monday.com, Make, Linear, Atlassian, ClickUp.  \n\n\n### **Summary**  \nThe interface is a **modal-based app connector hub** for Manus AI, focused on enabling users to integrate third-party tools (apps, custom APIs, MCPs). It prioritizes clarity and ease of use with a dark theme, consistent card design, and clear status indicators (tabs, beta tags, connection checks). No chat, file browser, sidebar, code editor, or workflow displays are present—its sole purpose is to list and manage app integrations.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1776396252,
+  "id": "2026041711231400d96257651b4ddc",
+  "model": "glm-4.6v",
+  "object": "chat.completion",
+  "request_id": "2026041711231400d96257651b4ddc",
+  "usage": {
+    "completion_tokens": 989,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3979,
+    "prompt_tokens_details": {
+      "cached_tokens": 5
+    },
+    "total_tokens": 4968
+  }
+}
