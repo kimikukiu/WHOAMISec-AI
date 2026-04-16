@@ -229,9 +229,18 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   // Loading states
   const [botLoading, setBotLoading] = useState(false);
   const [glmLoading, setGlmLoading] = useState(false);
+  const [botActive, setBotActive] = useState(false);
+  const [botSetupLoading, setBotSetupLoading] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
+
+  // Agent capabilities
+  const [agentReasoning, setAgentReasoning] = useState(true);
+  const [agentMemory, setAgentMemory] = useState(false);
+  const [agentCots, setAgentCots] = useState(true);
 
   const glmEndRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const addLog = useCallback((type: LogEntry['type'], message: string) => {
     setLogs(prev => {
@@ -314,6 +323,66 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  // ─── Start / Stop Bot ───
+  const startBot = async () => {
+    setBotSetupLoading(true);
+    addLog('info', 'Starting bot...');
+    try {
+      // Setup bot commands and delete webhook (switch to polling)
+      const setupRes = await fetch('/api/telegram/setup', { method: 'POST' });
+      const setupData = await setupRes.json();
+      if (setupData.success || setupData.mode === 'polling') {
+        setBotActive(true);
+        addLog('ok', `Bot activated (${setupData.mode || 'polling'} mode). Commands registered.`);
+        toast.success('Bot activat! Trimite /start pe Telegram.');
+      } else {
+        addLog('err', setupData.error || 'Setup failed');
+        toast.error(setupData.error || 'Eroare la activare');
+      }
+    } catch (e: any) {
+      addLog('err', e.message);
+      toast.error('Eroare de rețea');
+    }
+    setBotSetupLoading(false);
+  };
+
+  const stopBot = async () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setBotActive(false);
+    setPollCount(0);
+    addLog('warn', 'Bot stopped');
+    toast.info('Bot oprit');
+  };
+
+  // ─── Bot Polling ───
+  useEffect(() => {
+    if (botActive) {
+      const poll = async () => {
+        try {
+          const res = await fetch('/api/telegram/poll', { method: 'POST' });
+          const data = await res.json();
+          if (data.success && data.processed > 0) {
+            setPollCount(prev => prev + data.processed);
+            addLog('info', `Polled ${data.processed} update(s)`);
+            refreshMessages();
+          }
+        } catch {}
+      };
+      // Poll every 3 seconds
+      poll();
+      pollIntervalRef.current = setInterval(poll, 3000);
+    }
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, [botActive]);
 
   // ─── Bot Commands ───
   const sendBotCommand = async (cmd?: string) => {
@@ -625,6 +694,62 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           {/* ═══ BOT CONTROL ═══ */}
           {activeSection === 'bot' && (
             <div className="space-y-5">
+              {/* Bot Power Card */}
+              <Card className={`bg-[#111827] border-2 ${botActive ? 'border-emerald-500/50' : 'border-slate-700/50'}`}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl ${botActive ? 'bg-emerald-500/20' : 'bg-slate-800'}`}>
+                        {botActive ? '🟢' : '🔴'}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg">Hermes Bot Agent</h3>
+                        <p className="text-xs text-slate-500">
+                          {botActive ? `Polling activ · ${pollCount} update(s) procesate` : 'Bot oprit · Click Start pentru activare'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {!botActive ? (
+                        <Button
+                          onClick={startBot}
+                          disabled={botSetupLoading || !config?.telegram_token_masked}
+                          className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold px-6"
+                        >
+                          {botSetupLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+                          Start Bot
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={stopBot}
+                          variant="destructive"
+                          className="px-6"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Stop Bot
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {botActive && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {['/start', '/status', '/api', '/code', '/analyze', '/files', '/model', '/deploy', '/train_prompt', '/p1', '/p12'].map(cmd => (
+                        <Button
+                          key={cmd}
+                          variant="outline"
+                          size="sm"
+                          className="bg-[#1a1f35] border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 text-xs"
+                          onClick={() => sendBotCommand(cmd)}
+                        >
+                          <Terminal className="h-3 w-3 mr-1" />
+                          {cmd}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="bg-[#111827] border-slate-700/50">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">💬 Send Command to Bot</CardTitle>
@@ -694,14 +819,88 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           {/* ═══ GLM ENGINE ═══ */}
           {activeSection === 'glm' && (
-            <Card className="bg-[#111827] border-slate-700/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">🧠 GLM Direct Chat</CardTitle>
-                <CardDescription className="text-slate-500 text-xs">
-                  Chat direct cu GLM API · Model: {config?.glm_model || 'glm-4.6'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <div className="space-y-5">
+              {/* Model Selector & Agent Toggles */}
+              <Card className="bg-[#111827] border-slate-700/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">🧠 Agent Settings</CardTitle>
+                  <CardDescription className="text-slate-500 text-xs">
+                    Multi-model AI Agent · Selectează modelul și capabilitățile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Model Selection */}
+                  <div>
+                    <label className="text-slate-400 text-xs font-medium mb-2 block">Model curent: <span className="text-blue-400">{glmModel}</span></label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                      {[
+                        { provider: 'Queen', models: ['queen-ultra', 'queen-max'] },
+                        { provider: 'Nous Research', models: ['hermes-4-405B', 'hermes-4-70B'] },
+                        { provider: 'OpenAI', models: ['gpt-5.4-pro', 'gpt-5.4', 'gpt-5.2'] },
+                        { provider: 'Anthropic', models: ['claude-opus-4-6', 'claude-sonnet-4-6'] },
+                        { provider: 'DeepSeek', models: ['DeepSeek-3.2'] },
+                        { provider: 'Google', models: ['gemini-3.0-pro-preview', 'gemini-3-flash'] },
+                        { provider: 'Kimi', models: ['kimi-k2.5'] },
+                        { provider: 'MiniMax', models: ['minimax-m2.5'] },
+                        { provider: 'Qwen', models: ['qwen3.6-plus', 'qwen3.5'] },
+                        { provider: 'z-ai / GLM', models: ['glm-5-turbo', 'glm-4.6', 'glm-4-flash'] },
+                      ].map(group => (
+                        <React.Fragment key={group.provider}>
+                          <div className="col-span-2 md:col-span-3 lg:col-span-4 text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-1">{group.provider}</div>
+                          {group.models.map(m => (
+                            <button
+                              key={m}
+                              onClick={() => { setGlmModel(m); saveConfig({ glm_model: m }); }}
+                              className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                                glmModel === m
+                                  ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                                  : 'bg-[#0a0e1a] border-slate-700/50 text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                              }`}
+                            >
+                              {m === 'queen-ultra' ? '👑 ' : m === 'queen-max' ? '👑 ' : ''}{m}
+                            </button>
+                          ))}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Agent Capability Toggles */}
+                  <Separator className="bg-slate-800" />
+                  <div className="flex flex-wrap gap-4">
+                    <button
+                      onClick={() => { setAgentReasoning(!agentReasoning); addLog('info', `Reasoning: ${!agentReasoning ? 'ON' : 'OFF'}`); }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border transition-all ${agentReasoning ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-[#0a0e1a] border-slate-700/50 text-slate-500'}`}
+                    >
+                      💡 Reasoning {agentReasoning ? 'ON' : 'OFF'}
+                    </button>
+                    <button
+                      onClick={() => { setAgentMemory(!agentMemory); addLog('info', `Memory: ${!agentMemory ? 'ON' : 'OFF'}`); }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border transition-all ${agentMemory ? 'bg-purple-500/20 border-purple-500/50 text-purple-300' : 'bg-[#0a0e1a] border-slate-700/50 text-slate-500'}`}
+                    >
+                      🧠 Memory {agentMemory ? 'ON' : 'OFF'}
+                    </button>
+                    <button
+                      onClick={() => { setAgentCots(!agentCots); addLog('info', `CoTs: ${!agentCots ? 'ON' : 'OFF'}`); }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium border transition-all ${agentCots ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' : 'bg-[#0a0e1a] border-slate-700/50 text-slate-500'}`}
+                    >
+                      🔗 CoTs in Context {agentCots ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* GLM Chat */}
+              <Card className="bg-[#111827] border-slate-700/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">🧠 AI Chat · <span className="text-blue-400">{glmModel}</span></CardTitle>
+                  <CardDescription className="text-slate-500 text-xs">
+                    {agentReasoning ? '💡 ' : ''}{agentMemory ? '🧠 ' : ''}{agentCots ? '🔗 ' : ''}
+                    {agentReasoning && 'Reasoning '}{agentMemory && 'Memory '}{agentCots && 'CoTs '}
+                    {!agentReasoning && !agentMemory && !agentCots && 'Standard mode'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
                 <ScrollArea className="h-[420px]">
                   <div className="space-y-2 pr-3">
                     {glmMessages.map((m, i) => (
@@ -740,8 +939,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                     {glmLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* ═══ FILES ═══ */}
