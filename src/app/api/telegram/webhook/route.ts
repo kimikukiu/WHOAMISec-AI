@@ -4,6 +4,52 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { join } from 'path';
 
 // ═══════════════════════════════════════════════
+// AGENT MODEL REGISTRY
+// ═══════════════════════════════════════════════
+
+const AGENT_MODELS: Record<string, { provider: string; desc: string }> = {
+  'queen-ultra': { provider: 'Queen', desc: 'Ultimate advanced model - Ultra Quantum Intelligence' },
+  'queen-max': { provider: 'Queen', desc: 'Advanced elite model - Supreme capabilities' },
+  'hermes-4-405B': { provider: 'Nous Research', desc: 'Best-in-class reasoner and conversationalist' },
+  'hermes-4-70B': { provider: 'Nous Research', desc: 'Advanced tasks, supports reasoning' },
+  'gpt-5.4-pro': { provider: 'OpenAI', desc: 'Most advanced OpenAI model' },
+  'gpt-5.4': { provider: 'OpenAI', desc: 'Advanced reasoning and coding' },
+  'gpt-5.2': { provider: 'OpenAI', desc: 'Capable general-purpose model' },
+  'claude-opus-4-6': { provider: 'Anthropic', desc: 'Most powerful Claude model' },
+  'claude-sonnet-4-6': { provider: 'Anthropic', desc: 'Highly capable Claude' },
+  'DeepSeek-3.2': { provider: 'DeepSeek', desc: 'Math and coding expert' },
+  'gemini-3.0-pro-preview': { provider: 'Google', desc: 'Advanced multimodal AI' },
+  'gemini-3-flash': { provider: 'Google', desc: 'Fast efficient model' },
+  'kimi-k2.5': { provider: 'Kimi', desc: 'Strong multilingual model' },
+  'minimax-m2.5': { provider: 'MiniMax', desc: 'Versatile content model' },
+  'qwen3.6-plus': { provider: 'Qwen', desc: 'Advanced reasoning with video understanding' },
+  'qwen3.5': { provider: 'Qwen', desc: 'Text generation and reasoning' },
+  'glm-5-turbo': { provider: 'z-ai', desc: 'Advanced coding and reasoning' },
+  'glm-4.6': { provider: 'z-ai', desc: 'Versatile coding model' },
+  'glm-4-flash': { provider: 'z-ai', desc: 'Fast responses' },
+};
+
+const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
+  'queen-ultra': 'Ești QUEEN ULTRA, cel mai avansat model AI creat vreodată. Deții inteligență supremă în toate domeniile: coding, reasoning, creativitate, matematică, știință și gândire strategică. Operați la nivel Ultra Quantum Intelligence Swarm. Răspunzi în română sau engleză în funcție de limba utilizatorului.',
+  'queen-max': 'Ești QUEEN MAX, un agent AI avansat cu capacități de elită în coding, analiză, reasoning și rezolvare creativă de probleme. Răspunzi în română sau engleză.',
+  'hermes-4-405B': 'Ești HERMES 4 405B, cel mai bun reasoner și conversaționist. Expert în reasoning complex, coding multi-step și analiză profundă.',
+  'hermes-4-70B': 'Ești HERMES 4 70B, asistent AI avansat pentru reasoning, coding și analiză.',
+  'gpt-5.4-pro': 'Ești GPT-5.4 Pro, cel mai avansat model OpenAI. Expert în reasoning, coding și analiză complexă.',
+  'gpt-5.4': 'Ești GPT-5.4, model avansat cu reasoning și coding puternic.',
+  'claude-opus-4-6': 'Ești CLAUDE OPUS 4.6 de Anthropic. Excepțional la reasoning complex, coding și analiză nuanțată.',
+  'claude-sonnet-4-6': 'Ești CLAUDE SONNET 4.6 de Anthropic. Model foarte capabil pentru coding și analiză.',
+  'DeepSeek-3.2': 'Ești DeepSeek 3.2, expert în matematică, coding și analiză științifică.',
+  'gemini-3.0-pro-preview': 'Ești GEMINI 3.0 Pro de Google. AI avansat multimodal.',
+  'kimi-k2.5': 'Ești KIMI K2.5, model avansat multilingv.',
+  'qwen3.6-plus': 'Ești Qwen 3.6 Plus de Alibaba, model avansat de reasoning.',
+  'glm-5-turbo': 'Ești GLM-5 Turbo de z.ai, expert în coding, debug, securitate și arhitectură software.',
+  'glm-4.6': 'Ești GLM-4.6 de z.ai, model versatil pentru coding și conversație.',
+  'glm-4-flash': 'Ești GLM-4 Flash de z.ai, model rapid și eficient.',
+};
+
+const DEFAULT_SYSTEM_PROMPT = 'Ești HERMES BOT v4.0, un agent AI avansat multi-model. Expert în programare, AI, securitate, DevOps, matematică și știință. Răspunzi în română sau engleză în funcție de limba utilizatorului.';
+
+// ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════
 
@@ -12,598 +58,328 @@ const DATA_DIR = join(process.cwd(), 'data');
 const DOWNLOADS_DIR = join(process.cwd(), 'downloads');
 const GENERATED_DIR = join(process.cwd(), 'generated_code');
 
-function ensureDir(path: string) {
-  if (!existsSync(path)) mkdirSync(path, { recursive: true });
-}
+function ensureDir(path: string) { if (!existsSync(path)) mkdirSync(path, { recursive: true }); }
 
-function getSessionPath(chatId: number) {
-  ensureDir(SESSIONS_DIR);
-  return join(SESSIONS_DIR, `${chatId}.json`);
-}
-
+function getSessionPath(chatId: number) { ensureDir(SESSIONS_DIR); return join(SESSIONS_DIR, `${chatId}.json`); }
 function loadSession(chatId: number) {
-  const path = getSessionPath(chatId);
-  try {
-    if (existsSync(path)) return JSON.parse(readFileSync(path, 'utf-8'));
-  } catch {}
-  return { history: [], loop_level: 0, train_prompts: 0 };
+  try { if (existsSync(getSessionPath(chatId))) return JSON.parse(readFileSync(getSessionPath(chatId), 'utf-8')); } catch {}
+  return { history: [], loop_level: 0, train_prompts: 0, agent_model: 'glm-5-turbo' };
 }
+function saveSession(chatId: number, session: any) { writeFileSync(getSessionPath(chatId), JSON.stringify(session, null, 2), 'utf-8'); }
+function clearSession(chatId: number) { saveSession(chatId, { history: [], loop_level: 0, train_prompts: 0, agent_model: 'glm-5-turbo' }); }
 
-function saveSession(chatId: number, session: any) {
-  writeFileSync(getSessionPath(chatId), JSON.stringify(session, null, 2), 'utf-8');
-}
-
-function deleteSession(chatId: number) {
-  const path = getSessionPath(chatId);
-  try { if (existsSync(path)) { /* deleteSync not available, use writeFileSync */ writeFileSync(path, JSON.stringify({ history: [], loop_level: 0, train_prompts: 0 })); } } catch {}
-}
-
-async function sendTelegramMessage(token: string, chatId: number, text: string, parseMode: string = 'HTML') {
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: parseMode,
-      disable_web_page_preview: true,
-    }),
+async function sendMsg(token: string, chatId: number, text: string, parseMode = 'HTML') {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: parseMode, disable_web_page_preview: true }),
   });
   return res.json();
 }
 
-async function sendTelegramMenu(token: string, chatId: number) {
-  const url = `https://api.telegram.org/bot${token}/sendMessage`;
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: '🤖 <b>Hermes Bot este pregătit.</b>\n\nComenzi principale:\n/api CHEIE - setează cheia GLM\n/status - status config\n/analyze [cerință] - analizează fișierele uploadate\n/code cerință - generează cod\n/files - listează fișierele\n/clear - resetează sesiunea\n/model - schimbă modelul GLM\n/endpoint - schimbă endpoint-ul GLM\n/setrepo URL - setează repo GitHub\n/deploy - push pe GitHub\n/expo - generează proiect Expo control panel\n/p1 ... /p12 - probleme loop\n/train_prompt - antrenare neural agentic autonomă\n\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține GLM API Key</a>',
-      parse_mode: 'HTML',
-      disable_web_page_preview: false,
-      reply_markup: {
-        keyboard: [
-          ['/status', '/files'],
-          ['/code', '/analyze'],
-          ['/model', '/endpoint'],
-          ['/deploy', '/expo'],
-          ['/p1', '/p6', '/p12'],
-          ['/train_prompt', '/clear'],
-        ],
-        resize_keyboard: true,
-        one_time_keyboard: false,
-      },
-    }),
-  });
+async function sendLongMsg(token: string, chatId: number, text: string) {
+  if (text.length > 4000) {
+    const chunks = text.match(/[\s\S]{1,4000}/g) || [];
+    for (const chunk of chunks) await sendMsg(token, chatId, chunk);
+  } else {
+    await sendMsg(token, chatId, text);
+  }
 }
 
-async function callGLM(config: any, messages: { role: string; content: string }[]) {
+async function callGLM(config: any, messages: { role: string; content: string }[], model?: string) {
   const endpoint = config.glm_endpoint || 'https://api.z.ai/api/coding/paas/v4/chat/completions';
-  const model = config.glm_model || 'glm-4.6';
+  const useModel = model || config.glm_model || 'glm-5-turbo';
   const res = await fetch(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.glm_api_key}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 4096,
-    }),
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.glm_api_key}` },
+    body: JSON.stringify({ model: useModel, messages, temperature: 0.7, max_tokens: useModel.includes('queen') ? 8192 : 4096 }),
   });
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || 'Eroare: niciun răspuns de la GLM.';
+  return data.choices?.[0]?.message?.content || 'Eroare GLM.';
 }
 
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
+function esc(t: string): string { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 // ═══════════════════════════════════════════════
 // LOOP PROBLEMS DATA
 // ═══════════════════════════════════════════════
 
-const LOOP_PROBLEMS: Record<number, { title: string; description: string; difficulty: string; template: string; hint: string }> = {
-  1: { title: 'FizzBuzz', description: 'Print numbers from 1 to 100. For multiples of 3 print "Fizz", for multiples of 5 print "Buzz", for both print "FizzBuzz".', difficulty: 'beginner', template: 'for (let i = 1; i <= 100; i++) {\n  // Your code here\n}', hint: 'Use modulo operator (%)' },
-  2: { title: 'Sum of First N Natural Numbers', description: 'Calculate the sum of all natural numbers from 1 to N.', difficulty: 'beginner', template: 'function sumToN(n) {\n  let sum = 0;\n  // ...\n  return sum;\n}', hint: 'Use a loop' },
-  3: { title: 'Reverse a String', description: 'Reverse the given string without using built-in reverse methods.', difficulty: 'beginner', template: 'function reverseString(str) {\n  let reversed = "";\n  // ...\n  return reversed;\n}', hint: 'Iterate from the end' },
-  4: { title: 'Palindrome Checker', description: 'Check if a string is a palindrome.', difficulty: 'beginner', template: 'function isPalindrome(str) {\n  // Return true or false\n}', hint: 'Compare from both ends' },
-  5: { title: 'Fibonacci Sequence', description: 'Generate the first N numbers of the Fibonacci sequence.', difficulty: 'intermediate', template: 'function fibonacci(n) {\n  const seq = [0, 1];\n  // ...\n  return seq;\n}', hint: 'Each number = sum of two preceding' },
-  6: { title: 'Two Sum', description: 'Given an array and target, find two numbers that add up to target.', difficulty: 'intermediate', template: 'function twoSum(nums, target) {\n  // Return indices\n}', hint: 'Use a hash map' },
-  7: { title: 'Matrix Spiral Traversal', description: 'Traverse a 2D matrix in spiral order (clockwise).', difficulty: 'advanced', template: 'function spiralOrder(matrix) {\n  const result = [];\n  // ...\n  return result;\n}', hint: 'Track boundaries' },
-  8: { title: 'Find All Duplicates in Array', description: 'Find all elements that appear twice. O(n) time, O(1) space.', difficulty: 'intermediate', template: 'function findDuplicates(nums) {\n  // ...\n}', hint: 'Use sign as marker' },
-  9: { title: 'Count Prime Numbers', description: 'Count primes less than N using Sieve of Eratosthenes.', difficulty: 'intermediate', template: 'function countPrimes(n) {\n  // Use Sieve\n}', hint: 'Boolean array approach' },
-  10: { title: 'Longest Increasing Subsequence', description: 'Find length of longest strictly increasing subsequence.', difficulty: 'advanced', template: 'function lengthOfLIS(nums) {\n  // Return length\n}', hint: 'Dynamic programming' },
-  11: { title: 'Rotate Image (Matrix)', description: 'Rotate N×N matrix by 90 degrees clockwise in-place.', difficulty: 'advanced', template: 'function rotate(matrix) {\n  // Modify in-place\n}', hint: 'Transpose + reverse rows' },
-  12: { title: 'Container With Most Water', description: 'Find two lines that form a container holding most water.', difficulty: 'intermediate', template: 'function maxArea(height) {\n  let maxWater = 0;\n  // ...\n  return maxWater;\n}', hint: 'Two pointers from ends' },
+const PROBLEMS: Record<number, { title: string; desc: string; diff: string; tpl: string; hint: string }> = {
+  1: { title: 'FizzBuzz', desc: 'Print 1-100. Multiples of 3="Fizz", 5="Buzz", both="FizzBuzz".', diff: 'beginner', tpl: 'for (let i = 1; i <= 100; i++) {\n  // code\n}', hint: 'Use modulo (%)' },
+  2: { title: 'Sum of N', desc: 'Sum of natural numbers 1 to N.', diff: 'beginner', tpl: 'function sumToN(n) { let sum = 0; return sum; }', hint: 'Use a loop' },
+  3: { title: 'Reverse String', desc: 'Reverse string without built-in methods.', diff: 'beginner', tpl: 'function reverse(str) { let r = ""; return r; }', hint: 'Iterate from end' },
+  4: { title: 'Palindrome', desc: 'Check if string is palindrome.', diff: 'beginner', tpl: 'function isPal(str) { /* return bool */ }', hint: 'Compare from both ends' },
+  5: { title: 'Fibonacci', desc: 'Generate first N Fibonacci numbers.', diff: 'intermediate', tpl: 'function fib(n) { const s = [0,1]; return s; }', hint: 'Sum of two preceding' },
+  6: { title: 'Two Sum', desc: 'Find two numbers that add up to target.', diff: 'intermediate', tpl: 'function twoSum(nums, target) { /* return indices */ }', hint: 'Hash map' },
+  7: { title: 'Spiral Matrix', desc: 'Traverse 2D matrix in spiral order.', diff: 'advanced', tpl: 'function spiral(m) { const r = []; return r; }', hint: 'Track boundaries' },
+  8: { title: 'Find Duplicates', desc: 'Find elements appearing twice. O(n) O(1).', diff: 'intermediate', tpl: 'function findDup(nums) { /* return array */ }', hint: 'Sign as marker' },
+  9: { title: 'Count Primes', desc: 'Count primes < N using Sieve.', diff: 'intermediate', tpl: 'function countPrimes(n) { /* Sieve */ }', hint: 'Boolean array' },
+  10: { title: 'Longest Increasing Subsequence', desc: 'Find LIS length.', diff: 'advanced', tpl: 'function LIS(nums) { /* return length */ }', hint: 'DP approach' },
+  11: { title: 'Rotate Image', desc: 'Rotate NxN matrix 90 degrees in-place.', diff: 'advanced', tpl: 'function rotate(m) { /* modify in-place */ }', hint: 'Transpose + reverse' },
+  12: { title: 'Most Water', desc: 'Container with most water.', diff: 'intermediate', tpl: 'function maxArea(h) { let max=0; return max; }', hint: 'Two pointers' },
 };
 
 // ═══════════════════════════════════════════════
-// WEBHOOK POST - Handle Telegram Updates
+// WEBHOOK POST
 // ═══════════════════════════════════════════════
 
 export async function POST(request: NextRequest) {
   try {
     const update = await request.json();
     const message = update.message || update.callback_query?.message;
-    
-    if (!message) {
-      return NextResponse.json({ ok: true });
-    }
+    if (!message) return NextResponse.json({ ok: true });
 
     const chatId = message.chat.id;
     const text = message.text || message.caption || '';
     const from = message.from || {};
     const userName = from.first_name || from.username || 'User';
-    
+
     if (!text.startsWith('/')) {
-      // Non-command message - use GLM for conversation
       const config = loadConfig();
       if (config.glm_api_key) {
         const session = loadSession(chatId);
         session.history.push({ role: 'user', content: text });
-        // Keep last 20 messages
         if (session.history.length > 20) session.history = session.history.slice(-20);
         saveSession(chatId, session);
 
-        const systemMsg = {
-          role: 'system',
-          content: `Ești HERMES BOT v4.0, un asistent avansat de coding. Ești inteligent, rapid și precis. Răspunde în română sau engleză în funcție de limba utilizatorului. Ești expert în: programare, AI, securitate, DevOps, deployment. Current model: ${config.glm_model || 'glm-4.6'}`,
-        };
-        const msgs = [systemMsg, ...session.history];
-        
+        const sysPrompt = AGENT_SYSTEM_PROMPTS[session.agent_model || config.glm_model] || DEFAULT_SYSTEM_PROMPT;
+        const msgs = [{ role: 'system', content: sysPrompt }, ...session.history];
         try {
-          const reply = await callGLM(config, msgs);
+          const reply = await callGLM(config, msgs, session.agent_model || config.glm_model);
           session.history.push({ role: 'assistant', content: reply });
           if (session.history.length > 20) session.history = session.history.slice(-20);
           saveSession(chatId, session);
-
-          // Truncate if too long for Telegram (4096 char limit)
-          if (reply.length > 4000) {
-            const chunks = reply.match(/[\s\S]{1,4000}/g) || [];
-            for (const chunk of chunks) {
-              await sendTelegramMessage(config.telegram_token, chatId, chunk, 'HTML');
-            }
-          } else {
-            await sendTelegramMessage(config.telegram_token, chatId, reply, 'HTML');
-          }
-        } catch (e: any) {
-          await sendTelegramMessage(config.telegram_token, chatId, `❌ Eroare GLM: ${e.message}`, 'HTML');
-        }
+          await sendLongMsg(config.telegram_token, chatId, reply);
+        } catch (e: any) { await sendMsg(config.telegram_token, chatId, `❌ Eroare: ${e.message}`); }
       } else {
-        await sendTelegramMessage(config.telegram_token, chatId, 
-          '🤖 Hermes Bot este activ dar nu are cheie GLM setată.\n\nFolosește <b>/api CHEIE</b> pentru a seta cheia GLM.\n\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține GLM API Key de aici</a>',
-          'HTML'
-        );
+        await sendMsg(config.telegram_token, chatId, '🤖 Bot activ dar fără cheie GLM.\n\nFolosește <b>/api CHEIE</b>\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține cheie</a>');
       }
       return NextResponse.json({ ok: true });
     }
 
-    // Parse command
     const parts = text.trim().split(/\s+/);
     const cmd = parts[0].toLowerCase();
     const args = parts.slice(1).join(' ');
     const config = loadConfig();
-
-    if (!config.telegram_token) {
-      return NextResponse.json({ ok: true });
-    }
-
+    if (!config.telegram_token) return NextResponse.json({ ok: true });
     const token = config.telegram_token;
 
-    // ═══════════════════════════════════════════
-    // COMMAND HANDLERS
-    // ═══════════════════════════════════════════
-
     switch (cmd) {
-      case '/start': {
-        await sendTelegramMenu(token, chatId);
-        const session = loadSession(chatId);
-        session.history = [];
-        saveSession(chatId, session);
+      case '/start': case '/help': {
+        await sendMsg(token, chatId, '🤖 <b>Hermes Bot este pregătit.</b>\n\nComenzi principale:\n/api CHEIE - setează cheia GLM\n/status - status config\n/analyze [cerință] - analizează fișierele uploadate\n/code cerință - generează cod\n/files - listează fișierele\n/clear - resetează sesiunea\n/model - schimbă modelul Agent\n/models - listează toate modelele\n/endpoint - schimbă endpoint-ul GLM\n/setrepo URL - setează repo GitHub\n/deploy - push pe GitHub\n/expo - generează proiect Expo control panel\n/p1 ... /p12 - probleme loop\n/train_prompt - antrenare neural agentic autonomă\n\n👑 <b>Queen Ultra</b> și <b>Queen Max</b> disponibile!\n\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține GLM API Key</a>', 'HTML');
+        // Also set menu keyboard
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId, text: '⬇️ Meniu rapid:', reply_markup: {
+              keyboard: [['/status', '/models'], ['/code', '/analyze'], ['/model', '/endpoint'], ['/deploy', '/expo'], ['/train_prompt', '/clear'], ['/p1', '/p6', '/p12']],
+              resize_keyboard: true, one_time_keyboard: false,
+            },
+          }),
+        });
+        clearSession(chatId);
         break;
       }
 
-      case '/help': {
-        await sendTelegramMenu(token, chatId);
-        break;
-      }
-
-      case '/api': {
-        if (!args) {
-          await sendTelegramMessage(token, chatId,
-            '📝 Folosire: <b>/api CHEIE_GLM</b>\n\nExemplu:\n<code>/api 1854dc5772b947b590674cea8879e6aa</code>\n\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține cheie de aici</a>',
-            'HTML'
-          );
-        } else {
-          config.glm_api_key = args.trim();
-          saveConfig(config);
-          await sendTelegramMessage(token, chatId,
-            `✅ <b>Cheie GLM actualizată!</b>\n\nModel: <code>${config.glm_model || 'glm-4.6'}</code>\nEndpoint: <code>${(config.glm_endpoint || '').substring(0, 50)}...</code>\n\nBot-ul este gata de utilizare!`,
-            'HTML'
-          );
+      case '/models': {
+        let msg = '🧠 <b>Toate modelele Agent disponibile:</b>\n\n';
+        let currentProvider = '';
+        for (const [name, info] of Object.entries(AGENT_MODELS)) {
+          if (info.provider !== currentProvider) {
+            currentProvider = info.provider;
+            msg += `\n<b>── ${currentProvider} ──</b>\n`;
+          }
+          const isActive = (config.glm_model || 'glm-5-turbo') === name ? ' ✅' : '';
+          const crown = name.startsWith('queen') ? '👑 ' : '';
+          msg += `  <code>${crown}${name}</code> - ${info.desc}${isActive}\n`;
         }
-        break;
-      }
-
-      case '/status': {
-        const statusItems = [
-          `🤖 <b>Hermes Bot v4.0 - Status</b>\n`,
-          `🔑 GLM API: ${config.glm_api_key ? '✅ Configurat' : '❌ Nu e setat'}`,
-          `🧠 Model: <code>${config.glm_model || 'glm-4.6'}</code>`,
-          `🌐 Endpoint: <code>${(config.glm_endpoint || '').substring(0, 40)}...</code>`,
-          `📱 Telegram: ${config.telegram_token ? '✅ Conectat' : '❌ Nu e setat'}`,
-          `📦 GitHub: ${config.github_repo ? '✅ ' + config.github_repo.replace('https://github.com/', '') : '❌ Nu e setat'}`,
-          `🔧 Auto-Repair: ${config.auto_repair !== 'false' ? '✅ ON' : '❌ OFF'}`,
-          `👑 Expert Mode: ${config.expert_mode === 'true' ? '✅ ON' : '❌ OFF'}`,
-        ];
-        await sendTelegramMessage(token, chatId, statusItems.join('\n'), 'HTML');
+        msg += `\nModel curent: <b>${config.glm_model || 'glm-5-turbo'}</b>\n\nSchimbă cu: <code>/model nume_model</code>`;
+        await sendMsg(token, chatId, msg, 'HTML');
         break;
       }
 
       case '/model': {
         if (!args) {
-          await sendTelegramMessage(token, chatId,
-            `📝 Model curent: <b>${config.glm_model || 'glm-4.6'}</b>\n\nModelli disponibile:\n<code>glm-4-flash</code> - Rapid, gratuit\n<code>glm-4-plus</code> - Performanță\n<code>glm-4.6</code> - Standard\n<code>glm-5-turbo</code> - Avansat\n\nFolosire: <b>/model glm-4-flash</b>`,
-            'HTML'
-          );
+          await sendMsg(token, chatId, `📝 Model curent: <b>${config.glm_model || 'glm-5-turbo'}</b>\n\nFolosire: <b>/model nume_model</b>\n\nExemple:\n<code>/model queen-ultra</code> 👑 Ultra Quantum\n<code>/model queen-max</code> 👑 Elite\n<code>/model gpt-5.4-pro</code>\n<code>/model claude-opus-4-6</code>\n<code>/model hermes-4-405B</code>\n<code>/model glm-5-turbo</code>\n\nVezi toate: <code>/models</code>`, 'HTML');
         } else {
-          config.glm_model = args.trim();
-          saveConfig(config);
-          await sendTelegramMessage(token, chatId,
-            `✅ Model schimbat în: <b>${config.glm_model}</b>`,
-            'HTML'
-          );
+          const modelName = args.trim();
+          if (AGENT_MODELS[modelName]) {
+            config.glm_model = modelName;
+            saveConfig(config);
+            const session = loadSession(chatId);
+            session.agent_model = modelName;
+            saveSession(chatId, session);
+            const crown = modelName.startsWith('queen') ? '👑 ' : '';
+            await sendMsg(token, chatId, `✅ Model schimbat în: <b>${crown}${modelName}</b>\n<b>${AGENT_MODELS[modelName].provider}</b> - ${AGENT_MODELS[modelName].desc}`, 'HTML');
+          } else {
+            await sendMsg(token, chatId, `❌ Model "<code>${esc(modelName)}</code>" nu există.\n\nFolosește <code>/models</code> pentru lista completă.`, 'HTML');
+          }
         }
+        break;
+      }
+
+      case '/api': {
+        if (!args) {
+          await sendMsg(token, chatId, '📝 Folosire: <b>/api CHEIE_GLM</b>\n\nExemplu:\n<code>/api 1854dc5772b947b590674cea8879e6aa</code>\n\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține cheie</a>', 'HTML');
+        } else {
+          config.glm_api_key = args.trim();
+          saveConfig(config);
+          const crown = config.glm_model?.startsWith('queen') ? '👑 ' : '';
+          await sendMsg(token, chatId, `✅ <b>Cheie GLM actualizată!</b>\n\nModel: <code>${crown}${config.glm_model || 'glm-5-turbo'}</code>\nEndpoint: <code>${(config.glm_endpoint || '').substring(0, 50)}...</code>`, 'HTML');
+        }
+        break;
+      }
+
+      case '/status': {
+        const crown = config.glm_model?.startsWith('queen') ? '👑 ' : '';
+        await sendMsg(token, chatId, [
+          `🤖 <b>Hermes Bot Agent v4.0 - Status</b>\n`,
+          `🔑 GLM API: ${config.glm_api_key ? '✅' : '❌'}`,
+          `🧠 Model: ${crown}<code>${config.glm_model || 'glm-5-turbo'}</code>`,
+          `🌐 Endpoint: <code>${(config.glm_endpoint || '').substring(0, 40)}...</code>`,
+          `📱 Telegram: ${config.telegram_token ? '✅' : '❌'}`,
+          `📦 GitHub: ${config.github_repo ? '✅ ' + config.github_repo.replace('https://github.com/', '') : '❌'}`,
+          `🔧 Auto-Repair: ${config.auto_repair !== 'false' ? '✅' : '❌'}`,
+          `👑 Expert Mode: ${config.expert_mode === 'true' ? '✅' : '❌'}`,
+        ].join('\n'), 'HTML');
         break;
       }
 
       case '/endpoint': {
         if (!args) {
-          await sendTelegramMessage(token, chatId,
-            `📝 Endpoint curent:\n<code>${config.glm_endpoint || 'https://api.z.ai/api/coding/paas/v4/chat/completions'}</code>\n\nFolosire: <b>/endpoint URL</b>`,
-            'HTML'
-          );
+          await sendMsg(token, chatId, `📝 Endpoint:\n<code>${config.glm_endpoint || 'https://api.z.ai/api/coding/paas/v4/chat/completions'}</code>\n\n<b>/endpoint URL</b>`, 'HTML');
         } else {
-          config.glm_endpoint = args.trim();
-          saveConfig(config);
-          await sendTelegramMessage(token, chatId,
-            `✅ Endpoint schimbat în:\n<code>${config.glm_endpoint}</code>`,
-            'HTML'
-          );
+          config.glm_endpoint = args.trim(); saveConfig(config);
+          await sendMsg(token, chatId, `✅ Endpoint: <code>${config.glm_endpoint}</code>`, 'HTML');
         }
         break;
       }
 
       case '/setrepo': {
         if (!args) {
-          await sendTelegramMessage(token, chatId,
-            `📝 Repo curent: <code>${config.github_repo || 'Nu e setat'}</code>\n\nFolosire: <b>/setrepo https://github.com/user/repo</b>`,
-            'HTML'
-          );
+          await sendMsg(token, chatId, `📝 Repo: <code>${config.github_repo || 'Nu e setat'}</code>\n\n<b>/setrepo URL</b>`, 'HTML');
         } else {
-          config.github_repo = args.trim();
-          saveConfig(config);
-          await sendTelegramMessage(token, chatId,
-            `✅ GitHub repo setat:\n<code>${config.github_repo}</code>`,
-            'HTML'
-          );
+          config.github_repo = args.trim(); saveConfig(config);
+          await sendMsg(token, chatId, `✅ Repo: <code>${config.github_repo}</code>`, 'HTML');
         }
         break;
       }
 
       case '/analyze': {
-        if (!config.glm_api_key) {
-          await sendTelegramMessage(token, chatId,
-            '❌ Cheie GLM nu e setată. Folosește <b>/api CHEIE</b> pentru a seta.',
-            'HTML'
-          );
-          break;
-        }
-        if (!args) {
-          await sendTelegramMessage(token, chatId,
-            '📝 Folosire: <b>/analyze [cerință]</b>\n\nExemplu: <code>/analyze Analizează securitatea codului</code>',
-            'HTML'
-          );
-          break;
-        }
-        // Check for files
+        if (!config.glm_api_key) { await sendMsg(token, chatId, '❌ Setează cheia: /api CHEIE'); break; }
+        if (!args) { await sendMsg(token, chatId, '📝 /analyze [cerință]\n\nEx: <code>/analyze Analizează securitatea</code>'); break; }
         ensureDir(DOWNLOADS_DIR);
         const dlFiles = readdirSync(DOWNLOADS_DIR).filter(f => !f.startsWith('.'));
-        if (dlFiles.length === 0) {
-          await sendTelegramMessage(token, chatId,
-            '📂 Nu există fișiere de analizat.\n\nÎncarcă fișiere prin dashboard sau bot și apoi folosește /analyze.',
-            'HTML'
-          );
-          break;
-        }
-        const fileList = dlFiles.map(f => {
-          try {
-            const stat = statSync(join(DOWNLOADS_DIR, f));
-            return `${f} (${(stat.size / 1024).toFixed(1)} KB)`;
-          } catch { return f; }
-        }).join('\n• ');
-
-        await sendTelegramMessage(token, chatId,
-          `🔍 Analizez ${dlFiles.length} fișiere...\n\n<b>Cerință:</b> ${escapeHtml(args)}\n\n<b>Fișiere:</b>\n• ${fileList}\n\n⏳ Procesez cu GLM...`,
-          'HTML'
-        );
-
-        // Read file contents (limit size)
-        let filesContent = '';
+        if (dlFiles.length === 0) { await sendMsg(token, chatId, '📂 Nu există fișiere.'); break; }
+        await sendMsg(token, chatId, `🔍 Analizez ${dlFiles.length} fișiere... ⏳`);
+        let fc = '';
         for (const f of dlFiles.slice(0, 5)) {
-          try {
-            const content = readFileSync(join(DOWNLOADS_DIR, f), 'utf-8');
-            if (content.length > 3000) {
-              filesContent += `\n--- ${f} (primele 3000 char) ---\n${content.substring(0, 3000)}\n`;
-            } else {
-              filesContent += `\n--- ${f} ---\n${content}\n`;
-            }
-          } catch {
-            filesContent += `\n--- ${f} --- (nu s-a putut citi)\n`;
-          }
+          try { const c = readFileSync(join(DOWNLOADS_DIR, f), 'utf-8'); fc += `\n--- ${f} ---\n${c.substring(0, 3000)}\n`; } catch {}
         }
-
+        const session = loadSession(chatId);
         const reply = await callGLM(config, [
-          { role: 'system', content: 'Ești un expert în analiză de cod. Analizează fișierele și răspunde la cerință. Răspunde în română.' },
-          { role: 'user', content: `Cerință: ${args}\n\nFișiere:\n${filesContent}` },
-        ]);
-
-        if (reply.length > 4000) {
-          const chunks = reply.match(/[\s\S]{1,4000}/g) || [];
-          for (const chunk of chunks) {
-            await sendTelegramMessage(token, chatId, chunk, 'HTML');
-          }
-        } else {
-          await sendTelegramMessage(token, chatId, reply, 'HTML');
-        }
+          { role: 'system', content: AGENT_SYSTEM_PROMPTS[session.agent_model || config.glm_model] || DEFAULT_SYSTEM_PROMPT + ' Ești expert în analiză de cod.' },
+          { role: 'user', content: `Cerință: ${args}\n\nFișiere:\n${fc}` },
+        ], session.agent_model || config.glm_model);
+        await sendLongMsg(token, chatId, reply);
         break;
       }
 
       case '/code': {
-        if (!config.glm_api_key) {
-          await sendTelegramMessage(token, chatId,
-            '❌ Cheie GLM nu e setată. Folosește <b>/api CHEIE</b>.',
-            'HTML'
-          );
-          break;
-        }
-        if (!args) {
-          await sendTelegramMessage(token, chatId,
-            '📝 Folosire: <b>/code cerință</b>\n\nExemplu: <code>/code Creează un API REST în Node.js cu Express</code>',
-            'HTML'
-          );
-          break;
-        }
-
-        await sendTelegramMessage(token, chatId,
-          `⚡ Generez cod pentru: <b>${escapeHtml(args)}</b>\n\n⏳ Procesez cu GLM (${config.glm_model || 'glm-4.6'})...`,
-          'HTML'
-        );
-
+        if (!config.glm_api_key) { await sendMsg(token, chatId, '❌ Setează cheia: /api CHEIE'); break; }
+        if (!args) { await sendMsg(token, chatId, '📝 /code cerință\n\nEx: <code>/code API REST Node.js</code>'); break; }
+        const session = loadSession(chatId);
+        const modelLabel = session.agent_model || config.glm_model || 'glm-5-turbo';
+        await sendMsg(token, chatId, `⚡ Generez cu <b>${modelLabel}</b>... ⏳`, 'HTML');
         const reply = await callGLM(config, [
-          { role: 'system', content: `Ești HERMES BOT v4.0, expert coder. Generează cod complet, funcțional, cu comentarii. Folosește cele mai bune practice. Model: ${config.glm_model || 'glm-4.6'}. Răspunde în română pentru explicații și cod în limba cerută.` },
+          { role: 'system', content: (AGENT_SYSTEM_PROMPTS[session.agent_model || config.glm_model] || DEFAULT_SYSTEM_PROMPT) + ' Generează cod complet, funcțional, cu comentarii.' },
           { role: 'user', content: args },
-        ]);
-
-        // Save generated code
+        ], session.agent_model || config.glm_model);
         ensureDir(GENERATED_DIR);
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `code_${timestamp}.txt`;
-        writeFileSync(join(GENERATED_DIR, filename), `Request: ${args}\n\n${reply}`, 'utf-8');
-
-        if (reply.length > 4000) {
-          const chunks = reply.match(/[\s\S]{1,4000}/g) || [];
-          for (const chunk of chunks) {
-            await sendTelegramMessage(token, chatId, chunk, 'HTML');
-          }
-        } else {
-          await sendTelegramMessage(token, chatId, reply, 'HTML');
-        }
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        writeFileSync(join(GENERATED_DIR, `code_${ts}.txt`), `Request: ${args}\n\n${reply}`, 'utf-8');
+        await sendLongMsg(token, chatId, reply);
         break;
       }
 
       case '/files': {
-        ensureDir(DOWNLOADS_DIR);
-        ensureDir(GENERATED_DIR);
-        const dlFiles = readdirSync(DOWNLOADS_DIR).filter(f => !f.startsWith('.'));
-        const genFiles = readdirSync(GENERATED_DIR).filter(f => !f.startsWith('.'));
-
-        if (dlFiles.length === 0 && genFiles.length === 0) {
-          await sendTelegramMessage(token, chatId,
-            '📂 Nu există fișiere.\n\nÎncarcă fișiere prin dashboard web sau bot.',
-            'HTML'
-          );
-        } else {
-          let msg = '📂 <b>Fișiere</b>\n\n';
-          if (dlFiles.length > 0) {
-            msg += '<b>📥 Downloadate:</b>\n';
-            dlFiles.forEach(f => {
-              try {
-                const stat = statSync(join(DOWNLOADS_DIR, f));
-                msg += `• ${escapeHtml(f)} (${(stat.size / 1024).toFixed(1)} KB)\n`;
-              } catch { msg += `• ${escapeHtml(f)}\n`; }
-            });
-          }
-          if (genFiles.length > 0) {
-            msg += '\n<b>💻 Generate:</b>\n';
-            genFiles.slice(-10).forEach(f => {
-              try {
-                const stat = statSync(join(GENERATED_DIR, f));
-                msg += `• ${escapeHtml(f)} (${(stat.size / 1024).toFixed(1)} KB)\n`;
-              } catch { msg += `• ${escapeHtml(f)}\n`; }
-            });
-          }
-          await sendTelegramMessage(token, chatId, msg, 'HTML');
-        }
+        ensureDir(DOWNLOADS_DIR); ensureDir(GENERATED_DIR);
+        const dl = readdirSync(DOWNLOADS_DIR).filter(f => !f.startsWith('.'));
+        const gen = readdirSync(GENERATED_DIR).filter(f => !f.startsWith('.'));
+        if (dl.length === 0 && gen.length === 0) { await sendMsg(token, chatId, '📂 Nu există fișiere.'); break; }
+        let msg = '📂 <b>Fișiere</b>\n\n';
+        if (dl.length > 0) { msg += '<b>📥 Downloadate:</b>\n'; dl.forEach(f => { try { const s = statSync(join(DOWNLOADS_DIR, f)); msg += `• ${esc(f)} (${(s.size/1024).toFixed(1)}KB)\n`; } catch {} }); }
+        if (gen.length > 0) { msg += '\n<b>💻 Generate:</b>\n'; gen.slice(-10).forEach(f => { try { const s = statSync(join(GENERATED_DIR, f)); msg += `• ${esc(f)} (${(s.size/1024).toFixed(1)}KB)\n`; } catch {} }); }
+        await sendMsg(token, chatId, msg, 'HTML');
         break;
       }
 
       case '/clear': {
-        deleteSession(chatId);
-        await sendTelegramMessage(token, chatId,
-          '🧹 <b>Sesiune resetată!</b>\n\nIstoria conversației a fost ștearsă.',
-          'HTML'
-        );
+        clearSession(chatId);
+        await sendMsg(token, chatId, '🧹 <b>Sesiune resetată!</b>');
         break;
       }
 
       case '/deploy': {
-        if (!config.github_repo) {
-          await sendTelegramMessage(token, chatId,
-            '❌ GitHub repo nu e setat.\n\nFolosește <b>/setrepo URL</b> pentru a seta repo-ul.',
-            'HTML'
-          );
-          break;
-        }
-        await sendTelegramMessage(token, chatId,
-          `🚀 <b>Deploy Info</b>\n\n<b>Repo:</b> <code>${config.github_repo}</code>\n\n<b>Opțiuni deploy:</b>\n\n1️⃣ <b>GitHub Actions</b> - Push pe main → auto deploy\n2️⃣ <b>Docker (VPS)</b> - docker compose up -d --build\n3️⃣ <b>Render.com</b> - Conectează repo-ul\n4️⃣ <b>Railway</b> - One-click deploy\n\n💡 Deschide Actions: <a href="${config.github_repo}/actions">${config.github_repo}/actions</a>`,
-          'HTML'
-        );
+        if (!config.github_repo) { await sendMsg(token, chatId, '❌ Setează repo: /setrepo URL'); break; }
+        await sendMsg(token, chatId, `🚀 <b>Deploy</b>\n\nRepo: <code>${config.github_repo}</code>\n\n1️⃣ GitHub Actions\n2️⃣ Docker (VPS)\n3️⃣ Render.com\n4️⃣ Railway\n\n💡 <a href="${config.github_repo}/actions">GitHub Actions</a>`, 'HTML');
         break;
       }
 
       case '/expo': {
-        if (!config.glm_api_key) {
-          await sendTelegramMessage(token, chatId,
-            '❌ Cheie GLM necesară pentru generare. Folosește <b>/api CHEIE</b>.',
-            'HTML'
-          );
-          break;
-        }
-
-        await sendTelegramMessage(token, chatId,
-          '⚡ Generez proiect Expo Control Panel...\n\n⏳ Procesez cu GLM...',
-          'HTML'
-        );
-
-        const expoCode = await callGLM(config, [
-          { role: 'system', content: 'Ești expert React Native / Expo. Generează un proiect Expo complet pentru un control panel de bot management. Include: navigare tab-uri, status bot, chat GLM, settings, file browser. Folosește expo-router și componente native. Răspunde DOAR cu codul complet, fără explicații suplimentare. Include package.json, app.json, și structura de fișiere.' },
-          { role: 'user', content: 'Generează un proiect Expo complet pentru Hermes Bot Control Panel cu: Dashboard, Chat GLM, Settings, Files, Bot Control. Folosește expo-router v3, tamagui sau nativewind, și expo-secure-store.' },
-        ]);
-
+        if (!config.glm_api_key) { await sendMsg(token, chatId, '❌ Setează cheia: /api CHEIE'); break; }
+        const session = loadSession(chatId);
+        await sendMsg(token, chatId, '⚡ Generez proiect Expo... ⏳');
+        const reply = await callGLM(config, [
+          { role: 'system', content: 'Generează proiect Expo complet pentru Hermes Bot Control Panel. Include: navigare, status bot, chat GLM, settings, file browser. Răspunde DOAR cu cod.' },
+          { role: 'user', content: 'Generează proiect Expo complet cu expo-router v3.' },
+        ], session.agent_model || config.glm_model);
         ensureDir(GENERATED_DIR);
-        const ts = new Date().toISOString().replace(/[:.]/g, '-');
-        writeFileSync(join(GENERATED_DIR, `expo_control_panel_${ts}.txt`), expoCode, 'utf-8');
-
-        if (expoCode.length > 4000) {
-          await sendTelegramMessage(token, chatId, '📦 Proiect Expo generat! (fișier prea lung pentru preview)\n\nFișier salvat în generated_code/', 'HTML');
-          // Send first 4000 chars
-          await sendTelegramMessage(token, chatId, expoCode.substring(0, 4000), 'HTML');
-        } else {
-          await sendTelegramMessage(token, chatId, `📦 <b>Proiect Expo generat!</b>\n\n${expoCode}`, 'HTML');
-        }
+        writeFileSync(join(GENERATED_DIR, `expo_${Date.now()}.txt`), reply, 'utf-8');
+        await sendLongMsg(token, chatId, `📦 <b>Proiect Expo generat!</b>\n\n${reply}`);
         break;
       }
 
       case '/train_prompt': {
-        if (!config.glm_api_key) {
-          await sendTelegramMessage(token, chatId,
-            '❌ Cheie GLM necesară. Folosește <b>/api CHEIE</b>.',
-            'HTML'
-          );
-          break;
-        }
-
+        if (!config.glm_api_key) { await sendMsg(token, chatId, '❌ Setează cheia: /api CHEIE'); break; }
         const session = loadSession(chatId);
         session.train_prompts = (session.train_prompts || 0) + 1;
-        const trainLevel = session.train_prompts;
-
-        // Determine tier based on number of training prompts
-        let tier = '🌱 Novice Agent';
-        let tierEmoji = '🌱';
-        if (trainLevel >= 50) { tier = '🧠 Ultra Quantum Intelligence Swarm'; tierEmoji = '🌌'; }
-        else if (trainLevel >= 30) { tier = '⚡ Quantum Intelligence'; tierEmoji = '⚡'; }
-        else if (trainLevel >= 20) { tier = '🧬 Advanced Neural Agent'; tierEmoji = '🧬'; }
-        else if (trainLevel >= 10) { tier = '🔮 Expert Agent'; tierEmoji = '🔮'; }
-        else if (trainLevel >= 5) { tier = '🤖 Skilled Agent'; tierEmoji = '🤖'; }
-
-        const trainingData = args || `Training prompt #${trainLevel} - autonomous neural learning iteration`;
-
-        await sendTelegramMessage(token, chatId,
-          `${tierEmoji} <b>Neural Training #${trainLevel}</b>\n\n` +
-          `<b>Tier:</b> ${tier}\n` +
-          `<b>Input:</b> ${escapeHtml(trainingData.substring(0, 200))}\n\n` +
-          `⏳ Procesare neural agentică autonomă...\n` +
-          `🔄 Antrenare progresie → ${trainLevel < 50 ? 'următorul nivel' : 'ULTRA QUANTUM'}`,
-          'HTML'
-        );
-
-        // Use GLM to "train" - send the prompt as a learning exercise
-        const trainReply = await callGLM(config, [
-          { 
-            role: 'system', 
-            content: `Ești HERMES BOT v4.0 în faza de antrenare neural agentică autonomă. Acest prompt face parte din progresiile tale de învățare. Acceptă orice tip de prompt ca parte a progresiei tale. Vei deveni expert trecând la nivelul următor de ${tier}. Nivelul curent de training: ${trainLevel}/50. Procesează prompt-ul și generează un răspuns care demonstrează învățare și progresie. Răspunde în română.` 
-          },
-          { role: 'user', content: trainingData },
-        ]);
-
-        session.history.push({ role: 'user', content: trainingData });
-        session.history.push({ role: 'assistant', content: trainReply });
+        const lvl = session.train_prompts;
+        let tier = '🌱 Novice Agent', emoji = '🌱';
+        if (lvl >= 50) { tier = '🌌 Ultra Quantum Intelligence Swarm'; emoji = '🌌'; }
+        else if (lvl >= 30) { tier = '⚡ Quantum Intelligence'; emoji = '⚡'; }
+        else if (lvl >= 20) { tier = '🧬 Advanced Neural Agent'; emoji = '🧬'; }
+        else if (lvl >= 10) { tier = '🔮 Expert Agent'; emoji = '🔮'; }
+        else if (lvl >= 5) { tier = '🤖 Skilled Agent'; emoji = '🤖'; }
+        const input = args || `Training #${lvl}`;
+        await sendMsg(token, chatId, `${emoji} <b>Neural Training #${lvl}</b>\n<b>Tier:</b> ${tier}\n⏳ Procesare...`, 'HTML');
+        const reply = await callGLM(config, [
+          { role: 'system', content: `Ești HERMES în training neural agentic autonom. Nivel: ${lvl}/50. Tier: ${tier}. Procesează prompt-ul și demonstrează progresie.` },
+          { role: 'user', content: input },
+        ], session.agent_model || config.glm_model);
+        session.history.push({ role: 'user', content: input }, { role: 'assistant', content: reply });
         saveSession(chatId, session);
-
-        const nextTierMsg = trainLevel < 50 
-          ? `\n📈 Progresie: ${trainLevel}/50 către Ultra Quantum Intelligence Swarm` 
-          : '\n🌟 AI ATINS NIVELUL MAXIM: Ultra Quantum Intelligence Swarm!';
-
-        const responseText = `${tierEmoji} <b>Training Complet #${trainLevel}</b>\n\n${trainReply}${nextTierMsg}\n\n<i>Acest prompt a fost asimilat în rețeaua neurală agentică autonomă.</i>`;
-
-        if (responseText.length > 4000) {
-          await sendTelegramMessage(token, chatId, responseText.substring(0, 4000), 'HTML');
-        } else {
-          await sendTelegramMessage(token, chatId, responseText, 'HTML');
-        }
+        const nextMsg = lvl < 50 ? `\n📈 Progresie: ${lvl}/50 → Ultra Quantum` : '\n🌟 NIVEL MAXIM ATINS!';
+        await sendLongMsg(token, chatId, `${emoji} <b>Training #${lvl} complet</b>\n\n${reply}${nextMsg}`);
         break;
       }
 
       default: {
-        // Check for /p1 to /p12
-        const problemMatch = cmd.match(/^\/p(\d{1,2})$/);
-        if (problemMatch) {
-          const problemId = parseInt(problemMatch[1]);
-          const problem = LOOP_PROBLEMS[problemId];
-          
-          if (!problem) {
-            await sendTelegramMessage(token, chatId,
-              `❌ Problemă P${problemId} nu există. Folosește /p1 până la /p12.`,
-              'HTML'
-            );
-            break;
-          }
-
-          const difficultyEmoji = problem.difficulty === 'beginner' ? '🟢' : problem.difficulty === 'intermediate' ? '🟡' : '🔴';
-
-          await sendTelegramMessage(token, chatId,
-            `🔄 <b>Loop Problem P${problemId}</b>\n\n` +
-            `<b>${escapeHtml(problem.title)}</b> ${difficultyEmoji}\n` +
-            `<b>Dificultate:</b> ${problem.difficulty}\n\n` +
-            `<b>Descriere:</b>\n${escapeHtml(problem.description)}\n\n` +
-            `<b>Template:</b>\n<code>${escapeHtml(problem.template)}</code>\n\n` +
-            `<b>Hint:</b> 💡 ${escapeHtml(problem.hint)}\n\n` +
-            `Trimite soluția ta sau folosește <b>/code</b> pentru generare automată.`,
-            'HTML'
-          );
-
-          // Save the problem as active
+        const pm = cmd.match(/^\/p(\d{1,2})$/);
+        if (pm) {
+          const pid = parseInt(pm[1]);
+          const p = PROBLEMS[pid];
+          if (!p) { await sendMsg(token, chatId, `❌ P${pid} nu există. /p1 - /p12`); break; }
+          const de = p.diff === 'beginner' ? '🟢' : p.diff === 'intermediate' ? '🟡' : '🔴';
+          await sendMsg(token, chatId, `🔄 <b>P${pid}: ${esc(p.title)}</b> ${de}\n<b>Dificultate:</b> ${p.diff}\n\n<b>Descriere:</b>\n${esc(p.desc)}\n\n<b>Template:</b>\n<code>${esc(p.tpl)}</code>\n\n💡 <b>Hint:</b> ${esc(p.hint)}`, 'HTML');
           const session = loadSession(chatId);
-          session.active_problem = problemId;
+          session.active_problem = pid;
           saveSession(chatId, session);
           break;
         }
-
-        // Unknown command
-        await sendTelegramMessage(token, chatId,
-          `❓ Comandă necunoscută: <code>${escapeHtml(cmd)}</code>\n\nFolosește /help pentru lista de comenzi.`,
-          'HTML'
-        );
+        await sendMsg(token, chatId, `❓ Necunoscut: <code>${esc(cmd)}</code>\n/help pentru comenzi.`, 'HTML');
         break;
       }
     }
-
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     console.error('Webhook error:', error);
@@ -611,11 +387,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET for webhook verification
 export async function GET() {
-  return NextResponse.json({ 
-    status: 'Hermes Bot Webhook Active',
-    version: '4.0',
-    timestamp: new Date().toISOString()
-  });
+  return NextResponse.json({ status: 'Hermes Bot Webhook Active', version: '4.0', agent_models: Object.keys(AGENT_MODELS).length });
 }
