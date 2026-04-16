@@ -1,0 +1,18 @@
+{
+  "history": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "Bună! 😊 Cum te pot ajuta astăzi?"
+    }
+  ],
+  "train_prompts": 0,
+  "agent_model": "glm-4-plus",
+  "files": [],
+  "generated": [],
+  "context": "",
+  "owner_id": null
+}
