@@ -6,5 +6,6 @@
   "github_repo": "https://github.com/kimikukiu/hermes-project-whoamisec",
   "auto_repair": "true",
   "max_repair_iterations": 3,
-  "expert_mode": "true"
+  "expert_mode": "true",
+  "owner_id": "8135486660"
 }
