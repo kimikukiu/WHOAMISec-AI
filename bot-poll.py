@@ -88,10 +88,7 @@ def main():
     while True:
         try:
             offset = get_offset()
-            params = (
-                f'limit=100&offset={offset}&timeout=15'
-                f'&allowed_updates=%5B%22message%22%2C%22callback_query%22%5D'
-            )
+            params = f'limit=100&offset={offset}&timeout=15'
 
             result = telegram_api(token, 'getUpdates', params)
             if not result or not result.get('ok'):
