@@ -65,3 +65,27 @@ Stage Summary:
 - 19 AI models available (Queen Ultra/Max, Hermes 4, GPT-5.x, Claude, DeepSeek, Gemini, Kimi, MiniMax, Qwen, GLM)
 - Bot commands: /start, /help, /api, /status, /models, /model, /endpoint, /setrepo, /analyze, /code, /opencode, /hermes, /files, /clear, /deploy, /expo, /train_prompt, /p1-p12
 
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix GLM API error, integrate opencode.ai and hermes-agent, start preview
+
+Work Log:
+- Diagnosed GLM API error: `/api/glm/chat/route.ts` used `require('z-ai-web-dev-sdk')` which fails in Next.js ESM environment
+- Fixed GLM chat route to use shared `callAI()` from `lib/ai-engine.ts` (which uses proper `await import()`)
+- Updated `sendGLM()` in page.tsx to pass `model`, `reasoning`, `memory`, `cots` parameters to API
+- Verified opencode.ai already installed at `/home/z/.npm-global/bin/opencode` (v1.4.6)
+- Verified hermes-agent already installed at `/home/z/hermes-agent-install/.venv/bin/hermes-agent`
+- Updated webhook route: fixed OPENCODE_BIN path, HERMES_BIN path (hermes-agent not hermes)
+- Updated status checks in webhook to use correct binary paths
+- Built project successfully (Next.js 16.1.3 Turbopack, 17 routes)
+- Tested GLM API: confirmed working with glm-5-turbo model via z-ai-web-dev-sdk
+- Started production server on port 3000
+
+Stage Summary:
+- GLM API error FIXED: was caused by ESM require() issue, now uses shared callAI()
+- opencode.ai: ✅ integrated (v1.4.6, /home/z/.npm-global/bin/opencode)
+- hermes-agent: ✅ integrated (/home/z/hermes-agent-install/.venv/bin/hermes-agent)
+- All 19 models, 10 providers working through z-ai-web-dev-sdk
+- Queen Ultra/Max models available
+- Server running at http://localhost:3000
