@@ -41,3 +41,27 @@ Stage Summary:
 - Agent toggles: Reasoning, Memory, CoTs in Context
 - Dashboard has Start Bot / Stop Bot controls with real-time polling indicator
 
+---
+Task ID: 2
+Agent: Main Agent
+Task: Install OpenCode + Hermes Agent, fix GLM API, integrate all tools
+
+Work Log:
+- Fixed GLM API error: switched from direct API calls to z-ai-web-dev-sdk (built-in, always works)
+- Created /src/lib/ai-engine.ts as shared AI engine module
+- Installed OpenCode globally via npm (opencode-ai)
+- Cloned hermes-agent from Nous Research GitHub, installed in venv at /home/z/hermes-agent-install
+- Updated /api/glm/chat/route.ts to use z-ai-web-dev-sdk with fallback
+- Updated /api/telegram/webhook/route.ts: added /opencode, /hermes commands, Queen models, shared AI engine, timeout-safe Telegram API calls
+- Fixed turbopack build issue with hermes-agent venv symlinks (moved outside project)
+- Fixed server crashes from Telegram API keyboard calls (non-blocking fetch with .catch)
+- All 17 routes built successfully
+- Full integration test: /start, /status, non-command chat all working without crashes
+
+Stage Summary:
+- GLM API: FIXED - uses z-ai-web-dev-sdk engine (no external key needed)
+- OpenCode: INSTALLED at /usr/local/bin/opencode
+- Hermes Agent: INSTALLED at /home/z/hermes-agent-install/.venv/bin/hermes
+- 19 AI models available (Queen Ultra/Max, Hermes 4, GPT-5.x, Claude, DeepSeek, Gemini, Kimi, MiniMax, Qwen, GLM)
+- Bot commands: /start, /help, /api, /status, /models, /model, /endpoint, /setrepo, /analyze, /code, /opencode, /hermes, /files, /clear, /deploy, /expo, /train_prompt, /p1-p12
+
