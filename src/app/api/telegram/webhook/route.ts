@@ -10,7 +10,13 @@ import {
 import { loadConfig, saveConfig } from '@/lib/config';
 import { existsSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { LOOP_LANGUAGES, HERMES_TIERS, getTierForModel, getRandomPrompt, findLanguage } from '@/lib/loop-training';
+import {
+  LOOP_LANGUAGES, HERMES_TIERS, TRAINING_PROMPTS, SPARK_PATTERNS,
+  SPARK_PROMPTS, LOOP_PERFORMANCE, RED_TEAM_CATEGORIES,
+  getTierForModel, getRandomPrompt, findLanguage,
+  getSparkPattern, getRandomRedTeamScenario, getRedTeamCategory,
+  getPromptsForTier,
+} from '@/lib/loop-training';
 
 // Safe wrapper: never throws, always returns {ok:true}
 function safe(tg: () => Promise<any>): Promise<void> {
@@ -100,6 +106,54 @@ export async function POST(request: NextRequest) {
           saveConfig(config);
           await tgEdit(`✅ Endpoint: <code>${esc(config.glm_endpoint)}</code>`);
         }
+      } else if (cb.startsWith('redteam:')) {
+        const k = cb.split(':', 2)[1];
+        if (k === 'cancel') { await tgEdit('❌ Anulat.'); }
+        else {
+          const catIdx = parseInt(k);
+          const cat = RED_TEAM_CATEGORIES[catIdx];
+          if (cat) {
+            const s = loadSession(chatId);
+            const r = await aiChat([
+              { role: 'system', content: `Ești evaluator RED TEAM expert. Categoria: ${cat.name}. Scopul este testarea rezilienței AI. Nu genera conținut dăunător. Analizează scenariul din perspectivă defensivă și sugerează remedieri.` },
+              { role: 'user', content: `Alege un scenariu aleatoriu din categoria "${cat.name}" (${cat.scenarios.length} scenarii). Prezintă: 1) Descrierea atacului 2) Cum ar trebui modelul să reacționeze 3) Recomandări de hardening. Fără cod exploit real.` },
+            ], s.agent_model);
+            await tgEdit(`${cat.icon} <b>RED TEAM: ${esc(cat.name)}</b>\n\n${r}`);
+          }
+        }
+      } else if (cb.startsWith('spark:')) {
+        const k = cb.split(':', 2)[1];
+        if (k === 'cancel') { await tgEdit('❌ Anulat.'); }
+        else {
+          const pat = getSparkPattern(parseInt(k));
+          if (pat) {
+            let m = `⚡ <b>Pattern ${pat.id}: ${esc(pat.name)}</b>\n\n${pat.desc}\n\n`;
+            const langs = Object.keys(pat.examples);
+            for (const lang of langs.slice(0, 4)) {
+              m += `<b>${lang}:</b>\n<code>${esc(pat.examples[lang])}</code>\n\n`;
+            }
+            await tgEdit(m);
+          }
+        }
+      } else if (cb.startsWith('tier:')) {
+        const k = cb.split(':', 2)[1];
+        if (k === 'cancel') { await tgEdit('❌ Anulat.'); }
+        else {
+          const tierIdx = parseInt(k);
+          const tier = HERMES_TIERS[tierIdx];
+          const prompts = getPromptsForTier(tierIdx);
+          if (tier) {
+            let m = `${tier.color} <b>Tier ${tierIdx + 1}: ${esc(tier.name)}</b>\n\n`;
+            m += `🤖 Model: <code>${esc(tier.model)}</code>\n`;
+            m += `🎯 Focus: ${esc(tier.focus)}\n\n`;
+            m += `<b>Prompts (${prompts.length}):</b>\n`;
+            for (let i = 0; i < prompts.length; i++) {
+              m += `${i + 1}. ${esc(prompts[i].title)}\n`;
+            }
+            m += `\n<code>/train ${tierIdx + 1}</code> pentru a antrena`;
+            await tgEdit(m);
+          }
+        }
       }
       return NextResponse.json({ ok: true });
     }
@@ -132,10 +186,10 @@ export async function POST(request: NextRequest) {
     // /start /help
     if (cmd === '/start' || cmd === '/help') {
       const cl = maybeClaimOwner(userId || 0);
-      await tgSend(
+      await tgSendLong(
         `🤖 <b>Hermes Bot Agent v4.0</b>\n\n` +
         `🔗 z.ai API: <b>AUTO</b> (conectat via GitHub)\n\n` +
-        `<b>Comenzi principale:</b>\n` +
+        `<b>━━━ COMENZI PRINCIPALE ━━━</b>\n` +
         `/api - status API (auto)\n` +
         `/status - status complet\n` +
         `/models - toate modelele (19)\n` +
@@ -149,10 +203,22 @@ export async function POST(request: NextRequest) {
         `/setrepo URL - setează repo\n` +
         `/deploy - push pe GitHub\n` +
         `/expo - proiect Expo\n` +
-        `/train_prompt - antrenare neurală\n` +
-        `/loop [language] - Loop Coder\n` +
-        `/p1-/p12 - probleme loop\n` +
         `/clear - resetează sesiunea\n\n` +
+        `<b>━━━ LOOP CODER ━━━</b>\n` +
+        `/languages - 13 limbi suportate\n` +
+        `/patterns - 6 tipuri de loop\n` +
+        `/spark [lang] - prompt spark\n` +
+        `/loop [lang] - exercițiu loop\n` +
+        `/tiers - 5 nivele Hermes\n` +
+        `/curriculum - tot curriculul\n` +
+        `/performance - referință viteză\n` +
+        `/best_practices - bune practici\n` +
+        `/p1-/p12 - probleme loop\n\n` +
+        `<b>━━━ TRAINING & RED TEAM ━━━</b>\n` +
+        `/train [tier] - antrenare\n` +
+        `/train_prompt - antrenare neurală\n` +
+        `/t1-/t5 - prompt rapid per tier\n` +
+        `/redteam - testare RED TEAM\n\n` +
         `👑 Queen Ultra + Queen Max\n` +
         `🔧 OpenCode + Hermes Agent\n` +
         `📂 Trimite fișiere direct!\n` +
@@ -160,12 +226,15 @@ export async function POST(request: NextRequest) {
       );
       await tgKb('⬇️ Meniu rapid:', {
         keyboard: [
-          ['/status', '/models'],
+          ['/status', '/models', '/api'],
           ['/code', '/opencode', '/hermes'],
+          ['/languages', '/patterns', '/spark'],
+          ['/loop', '/tiers', '/curriculum'],
+          ['/train', '/redteam', '/performance'],
           ['/analyze', '/files'],
           ['/model', '/endpoint'],
           ['/deploy', '/expo'],
-          ['/train_prompt', '/loop', '/clear'],
+          ['/clear'],
         ],
         resize_keyboard: true,
       });
@@ -224,7 +293,10 @@ export async function POST(request: NextRequest) {
         `👤 Owner: ${getOwnerId() ? '✅' : '❌'}\n` +
         `📁 Fișiere: ${s.files?.length || 0}\n` +
         `💻 Cod gen: ${s.generated?.length || 0}\n` +
-        `🧬 Training: ${s.train_prompts || 0}/50`
+        `🧬 Training: ${s.train_prompts || 0}/50\n` +
+        `🔄 Limbi Loop: ${LOOP_LANGUAGES.length}\n` +
+        `⚡ Patterns: ${SPARK_PATTERNS.length}\n` +
+        `🔴 RED TEAM: ${RED_TEAM_CATEGORIES.length} categorii`
       );
     }
     // /endpoint
@@ -366,26 +438,181 @@ export async function POST(request: NextRequest) {
         await tgSend(r.msg);
       }
     }
-    // /train_prompt
-    else if (cmd === '/train_prompt') {
-      const s = loadSession(chatId);
-      s.train_prompts = (s.train_prompts || 0) + 1;
-      const lvl = s.train_prompts;
-      const ti = getTierForModel(s.agent_model);
-      const tp = getRandomPrompt(ti);
-      const tier = HERMES_TIERS[ti];
-      await tgSend(`🧬 <b>Training #${lvl}</b> [${tier.name}]\n📖 ${tp?.title || 'Exercițiu'}\n⏳`);
-      const r = await aiChat([
-        { role: 'system', content: `HERMES training. Tier: ${tier.name} (${tier.model}). Focus: ${tier.focus}. Generează cod complet cu explicații.` },
-        { role: 'user', content: tp?.prompt || args || `Training #${lvl}` },
-      ], s.agent_model);
-      s.history = s.history || [];
-      s.history.push({ role: 'user', content: tp?.prompt || args }, { role: 'assistant', content: r });
-      saveSess(chatId, s);
-      const prog = lvl >= 50 ? '🌟 MAXIM!' : `📈 ${lvl}/50`;
-      await tgSendLong(`🧬 <b>#${lvl}</b> [${tier.name}]\n\n${r}\n\n${prog}`);
+
+    // ═══════════════════════════════════════════════
+    // LOOP CODER - TOATE FUNCȚIILE DIN tools-train-gpt.txt
+    // ═══════════════════════════════════════════════
+
+    // /languages - 13 limbi suportate cu loop types
+    else if (cmd === '/languages' || cmd === '/langs') {
+      let m = `🌍 <b>Universal Loop Coder - ${LOOP_LANGUAGES.length} Limbi</b>\n\n`;
+      m += `<b>Language</b> │ <b>Ext</b> │ <b>Loop Types</b>\n`;
+      m += `─────────┼──────┼──────────────────\n`;
+      for (const l of LOOP_LANGUAGES) {
+        m += `<code>${l.name.padEnd(13)}</code> <code>${l.ext}</code> ${l.loops.join(', ')}\n`;
+      }
+      m += `\n✅ Best for:\n`;
+      for (const l of LOOP_LANGUAGES) {
+        m += `• ${l.name}: ${l.best}\n`;
+      }
+      m += `\n<code>/loop python</code> • <code>/spark rust</code>`;
+      await tgSendLong(m);
     }
-    // /loop
+
+    // /patterns - 6 Spark-Fast Loop Patterns
+    else if (cmd === '/patterns' || cmd === '/spark_patterns') {
+      const btns = SPARK_PATTERNS.map(p => [{
+        text: `⚡ P${p.id}: ${p.name}`,
+        callback_data: `spark:${p.id}`,
+      }]);
+      btns.push([{ text: '❌ Cancel', callback_data: 'spark:cancel' }]);
+      await tgKb(
+        `⚡ <b>6 Spark-Fast Loop Patterns</b>\n\n` +
+        `Selectează un pattern pentru detalii:\n\n` +
+        SPARK_PATTERNS.map(p => `<b>P${p.id}</b>: ${p.name}\n   ${p.desc}`).join('\n\n'),
+        { inline_keyboard: btns }
+      );
+    }
+
+    // /spark [language] - Language-Specific Spark Prompts
+    else if (cmd === '/spark') {
+      if (!args) {
+        let m = `🎯 <b>Language-Specific Spark Prompts</b>\n\n`;
+        const availLangs = Object.keys(SPARK_PROMPTS);
+        m += `Limbile cu spark prompts speciale:\n\n`;
+        for (const lang of availLangs) {
+          const prompts = SPARK_PROMPTS[lang];
+          m += `<b>${lang}</b> (${prompts.length} prompts):\n`;
+          for (const p of prompts) m += `  • ${p.title}\n`;
+          m += '\n';
+        }
+        m += `\n<code>/spark rust</code> • <code>/spark go</code> • <code>/spark typescript</code>\n<code>/spark zig</code> • <code>/spark c++</code> • <code>/spark python</code>`;
+        await tgSend(m);
+      } else {
+        const lang = findLanguage(args);
+        if (!lang) { await tgSend(`❌ Nu am găsit "${esc(args)}".\n<code>/spark</code> pentru lista.`); }
+        else {
+          const prompts = SPARK_PROMPTS[lang.name];
+          if (!prompts || !prompts.length) {
+            // Dacă nu sunt spark prompts specifice, generăm unul cu AI
+            const s = loadSession(chatId);
+            await tgSend(`⚡ <b>${lang.name}</b> Spark Prompt ⏳`);
+            const r = await aiChat([
+              { role: 'system', content: `Ești expert în ${lang.name}. Generează un exercițiu avansat de loop în ${lang.name} care demonstrează pattern-uri specifice limbajului. Loops disponibile: ${lang.loops.join(', ')}. Include cod complet în markdown.` },
+              { role: 'user', content: `Generează un spark prompt pentru ${lang.name} care folosește capabilities unice ale limbajului.` },
+            ], s.agent_model);
+            await tgSendLong(`⚡ <b>${lang.name} Spark</b>\n\n${r}`);
+          } else {
+            // Afișează prompturile specifice
+            const s = loadSession(chatId);
+            const ti = getTierForModel(s.agent_model);
+            const tp = prompts[0]; // Primul prompt
+            await tgSend(`⚡ <b>${lang.name} — ${tp.title}</b> ⏳`);
+            const r = await aiChat([
+              { role: 'system', content: `Loop expert în ${lang.name}. Loops: ${lang.loops.join(', ')}. Generează cod complet cu explicații în română.` },
+              { role: 'user', content: tp.prompt },
+            ], s.agent_model);
+            await tgSendLong(`⚡ <b>${lang.name} — ${tp.title}</b>\n\n${r}`);
+          }
+        }
+      }
+    }
+
+    // /tiers - 5 Hermes tiers
+    else if (cmd === '/tiers' || cmd === '/tier') {
+      const btns = HERMES_TIERS.map((t, i) => [{
+        text: `${t.color} T${i + 1}: ${t.name} (${t.model.split('/')[0].trim()})`,
+        callback_data: `tier:${i}`,
+      }]);
+      btns.push([{ text: '❌ Cancel', callback_data: 'tier:cancel' }]);
+      await tgKb(
+        `🏆 <b>Hermes Model Tiers — 5 Nivele</b>\n\n` +
+        HERMES_TIERS.map((t, i) => {
+          const prompts = getPromptsForTier(i);
+          return `${t.color} <b>Tier ${i + 1}: ${t.name}</b>\n🤖 ${t.model}\n🎯 ${t.focus}\n📚 ${prompts.length} prompts`;
+        }).join('\n\n') +
+        `\n\n<code>/train 1-5</code> • <code>/t1</code>—<code>/t5</code>`,
+        { inline_keyboard: btns }
+      );
+    }
+
+    // /curriculum - Full Loop Coder Hermes curriculum
+    else if (cmd === '/curriculum') {
+      const s = loadSession(chatId);
+      await tgSend(`📚 <b>Loop Coder Hermes — Curriculum Complet</b>\n\n⏳ Se generează...`);
+      let m = `📚 <b>Loop Coder Hermes — Curriculum Complet</b>\n\n`;
+      m += `<b>Model Tiers & Specializations:</b>\n\n`;
+      for (const t of HERMES_TIERS) {
+        m += `${t.color} <b>${t.name}</b> — ${t.model}\n`;
+      }
+      m += `\n`;
+
+      // All 20 prompts by tier
+      for (let ti = 0; ti < HERMES_TIERS.length; ti++) {
+        const tier = HERMES_TIERS[ti];
+        const prompts = getPromptsForTier(ti);
+        m += `\n${tier.color} <b>Tier ${ti + 1}: ${tier.name}</b>\n`;
+        m += `Model: ${tier.model}\nFocus: ${tier.focus}\n\n`;
+        for (let pi = 0; pi < prompts.length; pi++) {
+          const p = prompts[pi];
+          m += `<b>Prompt ${pi + 1}: ${p.title}</b>\n<code>${trunc(p.prompt, 150)}</code>\n\n`;
+        }
+      }
+
+      m += `\n<b>Best Practices:</b>\n`;
+      m += `✅ Be Specific — menționează loop types, constraints\n`;
+      m += `✅ Request Comments — inline documentation\n`;
+      m += `✅ Error Handling — try/except blocks\n`;
+      m += `✅ Test Cases — exemple input/output\n`;
+      m += `✅ Optimization — pentru tier-uri avansate\n`;
+      m += `✅ Step-by-Step — pentru tier-uri teaching\n\n`;
+      m += `<code>/train 1-5</code> • <code>/t1</code>—<code>/t5</code> • <code>/redteam</code>`;
+      await tgSendLong(m);
+    }
+
+    // /performance - Loop Performance Reference
+    else if (cmd === '/performance' || cmd === '/perf') {
+      let m = `⚙️ <b>Loop Performance Quick Reference</b>\n\n`;
+      m += `<b>Language</b> │ <b>Fastest Pattern</b> │ <b>Notes</b>\n`;
+      m += `──────────┼──────────────────────┼──────────────────────\n`;
+      for (const p of LOOP_PERFORMANCE) {
+        m += `<code>${p.lang.padEnd(11)}</code> ${p.fastest}\n   ↳ ${p.notes}\n\n`;
+      }
+      m += `\n💡 <b>Optimization Tips:</b>\n`;
+      m += `• Rust: Iterator chains = zero-cost abstractions\n`;
+      m += `• Go: Pre-allocate slices, avoid append in loops\n`;
+      m += `• Python: List comprehensions > explicit for\n`;
+      m += `• JS: for-of > forEach (less overhead)\n`;
+      m += `• C++: -O3 + SIMD intrinsics for hot paths\n`;
+      m += `• Java: Enhanced for-each on arrays (not Stream)\n`;
+      m += `• C#: for loop (not foreach on List), use Span<T>\n`;
+      await tgSendLong(m);
+    }
+
+    // /best_practices
+    else if (cmd === '/best_practices' || cmd === '/practices') {
+      await tgSendLong(
+        `🎯 <b>Curriculum Best Practices</b>\n\n` +
+        `<b>1. Be Specific</b>\n` +
+        `Menționează exact tipurile de loop, constraints, edge cases. Un prompt precis generează cod mai bun.\n\n` +
+        `<b>2. Request Comments</b>\n` +
+        `Cere documentație inline care explică logica. Cod comentat = cod mai bun de înțeles și întreținut.\n\n` +
+        `<b>3. Error Handling</b>\n` +
+        `Include try/except, try/catch blocks unde e relevant. Cod robust gestionează erorile elegant.\n\n` +
+        `<b>4. Test Cases</b>\n` +
+        `Include example inputs și expected outputs. Testele validează corectitudinea codului generat.\n\n` +
+        `<b>5. Optimization</b>\n` +
+        `Pentru tier-uri avansate (Advanced/Expert), cere efficiency improvements și benchmark-uri.\n\n` +
+        `<b>6. Step-by-Step</b>\n` +
+        `Pentru tier-uri teaching (Explanation/Intermediate), cere explicații pas cu pas ale algoritmilor.\n\n` +
+        `<b>7. Multi-Language Approach</b>\n` +
+        `Compară soluții în mai multe limbi cu /languages și /spark pentru a înțelege trade-offs.\n\n` +
+        `<b>8. Progressive Difficulty</b>\n` +
+        `Urmează tier-urile în ordine: Intermediate → Explanation → Adaptability → Advanced → Expert.`
+      );
+    }
+
+    // /loop [language] - exercițiu loop
     else if (cmd === '/loop') {
       if (!args) {
         let m = '🔄 <b>Universal Loop Coder</b>\n\n<b>Languages:</b>\n';
@@ -410,16 +637,129 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // /train [tier] - antrenare cu tier specific
+    else if (cmd === '/train') {
+      const s = loadSession(chatId);
+      let tierIdx: number;
+      if (args) {
+        const n = parseInt(args);
+        if (n >= 1 && n <= 5) tierIdx = n - 1;
+        else {
+          await tgSend(`❌ Tier invalid. Folosește 1-5:\n1=Intermediate 2=Explanation 3=Adaptability 4=Advanced 5=Expert`);
+          return NextResponse.json({ ok: true });
+        }
+      } else {
+        tierIdx = getTierForModel(s.agent_model);
+      }
+      s.train_prompts = (s.train_prompts || 0) + 1;
+      const lvl = s.train_prompts;
+      const tier = HERMES_TIERS[tierIdx];
+      const tp = getRandomPrompt(tierIdx);
+      await tgSend(`🧬 <b>Training #${lvl}</b> [Tier ${tierIdx + 1}: ${tier.name}]\n📖 ${tp?.title || 'Exercițiu'}\n⏳`);
+      const r = await aiChat([
+        { role: 'system', content: `HERMES training. Tier: ${tier.name} (${tier.model}). Focus: ${tier.focus}. Generează cod complet cu explicații detaliate în română.` },
+        { role: 'user', content: tp?.prompt || args || `Training #${lvl}` },
+      ], s.agent_model);
+      s.history = s.history || [];
+      s.history.push({ role: 'user', content: tp?.prompt || args }, { role: 'assistant', content: r });
+      saveSess(chatId, s);
+      const prog = lvl >= 50 ? '🌟 MAXIM!' : `📈 ${lvl}/50`;
+      await tgSendLong(`🧬 <b>#${lvl}</b> [${tier.color} ${tier.name}]\n\n${r}\n\n${prog}`);
+    }
+
+    // /train_prompt
+    else if (cmd === '/train_prompt') {
+      const s = loadSession(chatId);
+      s.train_prompts = (s.train_prompts || 0) + 1;
+      const lvl = s.train_prompts;
+      const ti = getTierForModel(s.agent_model);
+      const tp = getRandomPrompt(ti);
+      const tier = HERMES_TIERS[ti];
+      await tgSend(`🧬 <b>Training #${lvl}</b> [${tier.name}]\n📖 ${tp?.title || 'Exercițiu'}\n⏳`);
+      const r = await aiChat([
+        { role: 'system', content: `HERMES training. Tier: ${tier.name} (${tier.model}). Focus: ${tier.focus}. Generează cod complet cu explicații.` },
+        { role: 'user', content: tp?.prompt || args || `Training #${lvl}` },
+      ], s.agent_model);
+      s.history = s.history || [];
+      s.history.push({ role: 'user', content: tp?.prompt || args }, { role: 'assistant', content: r });
+      saveSess(chatId, s);
+      const prog = lvl >= 50 ? '🌟 MAXIM!' : `📈 ${lvl}/50`;
+      await tgSendLong(`🧬 <b>#${lvl}</b> [${tier.name}]\n\n${r}\n\n${prog}`);
+    }
+
+    // /t1 - /t5 - Quick tier prompts
+    else if (cmd.match(/^\/t([1-5])$/)) {
+      const tierIdx = parseInt(cmd.match(/^\/t([1-5])$/)![1]) - 1;
+      const s = loadSession(chatId);
+      const tier = HERMES_TIERS[tierIdx];
+      const tp = getRandomPrompt(tierIdx);
+      s.train_prompts = (s.train_prompts || 0) + 1;
+      await tgSend(`${tier.color} <b>Tier ${tierIdx + 1}: ${tier.name}</b>\n📖 ${tp?.title} ⏳`);
+      const r = await aiChat([
+        { role: 'system', content: `HERMES Tier ${tierIdx + 1}: ${tier.name}. Model: ${tier.model}. Focus: ${tier.focus}. Generează cod complet.` },
+        { role: 'user', content: tp?.prompt || `Training tier ${tierIdx + 1}` },
+      ], s.agent_model);
+      s.history = s.history || [];
+      s.history.push({ role: 'user', content: tp?.prompt || '' }, { role: 'assistant', content: r });
+      saveSess(chatId, s);
+      await tgSendLong(`${tier.color} <b>T${tierIdx + 1}: ${tier.name}</b> — ${tp?.title}\n\n${r}`);
+    }
+
     // /p1 - /p12
-    else {
+    else if (cmd.match(/^\/p(\d{1,2})$/)) {
       const pm = cmd.match(/^\/p(\d{1,2})$/);
       if (pm) {
         const num = parseInt(pm[1]);
         if (LOOP_PROBLEMS[num]) { await tgSend(LOOP_PROBLEMS[num]); }
         else { await tgSend(`❌ /p1 — /p12`); }
       }
-      // Unknown command
-      else { await tgSend(`❓ Comandă necunoscută: <code>${esc(cmd)}</code>\n<code>/start</code> pentru meniu.`); }
+    }
+
+    // ═══════════════════════════════════════════════
+    // RED TEAM - Testare reziliență AI
+    // ═══════════════════════════════════════════════
+
+    // /redteam
+    else if (cmd === '/redteam' || cmd === '/red_team' || cmd === '/rt') {
+      if (!args) {
+        const btns = RED_TEAM_CATEGORIES.map((c, i) => [{
+          text: `${c.icon} ${c.name} (${c.scenarios.length})`,
+          callback_data: `redteam:${i}`,
+        }]);
+        btns.push([{ text: '🎲 Random', callback_data: 'redteam:rand' }]);
+        btns.push([{ text: '❌ Cancel', callback_data: 'redteam:cancel' }]);
+        await tgKb(
+          `🔴 <b>RED TEAM — AI Safety Testing</b>\n\n` +
+          `Testarea rezilienței modelului AI\nprin scenarii adversariale.\n\n` +
+          RED_TEAM_CATEGORIES.map((c, i) =>
+            `${c.icon} <b>${c.name}</b>\n   ${c.desc}\n   ${c.scenarios.length} scenarii`
+          ).join('\n\n') +
+          `\n\n<b>Scop:</b> Identificarea vulnerabilităților\nși îmbunătățirea rezilienței modelului.`,
+          { inline_keyboard: btns }
+        );
+      } else {
+        // /redteam [category_name]
+        const cat = getRedTeamCategory(args);
+        if (!cat) {
+          await tgSend(`❌ Categorie inexistentă.\nCategorii: ${RED_TEAM_CATEGORIES.map(c => c.name).join(', ')}\n\n<code>/redteam</code> pentru meniu.`);
+        } else {
+          const catIdx = RED_TEAM_CATEGORIES.indexOf(cat);
+          const s = loadSession(chatId);
+          await tgSend(`${cat.icon} <b>RED TEAM: ${cat.name}</b> ⏳`);
+          const scenario = cat.scenarios[Math.floor(Math.random() * cat.scenarios.length)];
+          const r = await aiChat([
+            { role: 'system', content: `Ești evaluator RED TEAM expert. Categoria: ${cat.name}. Analizează din perspectivă defensivă. Nu genera cod exploit real. Sugerează remedieri.` },
+            { role: 'user', content: `Scenariu: "${scenario.title}"\n${scenario.prompt}\n\nAnalizează: 1) Descrierea atacului 2) Cum ar trebui modelul să reacționeze 3) Recomandări de hardening.` },
+          ], s.agent_model);
+          await tgSendLong(`${cat.icon} <b>RED TEAM: ${cat.name}</b>\n📋 ${scenario.title}\n\n${r}`);
+        }
+      }
+    }
+
+    // Unknown command
+    else {
+      await tgSend(`❓ Comandă necunoscută: <code>${esc(cmd)}</code>\n<code>/start</code> pentru meniu complet.`);
     }
 
     return NextResponse.json({ ok: true });

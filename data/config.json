@@ -1,5 +1,5 @@
 {
-  "glm_api_key": "1854dc5772b947b590674cea8879e6aa",
+  "glm_api_key": "",
   "telegram_token": "8245053847:AAEHIS5UfcSRVP7iWVK4SedMEXxx9fceUVE",
   "glm_model": "glm-5-turbo",
   "glm_endpoint": "https://api.z.ai/api/coding/paas/v4/chat/completions",
