@@ -89,3 +89,28 @@ Stage Summary:
 - All 19 models, 10 providers working through z-ai-web-dev-sdk
 - Queen Ultra/Max models available
 - Server running at http://localhost:3000
+---
+Task ID: 1
+Agent: main
+Task: Fix entire Hermes Bot project - webhook crash, auto-polling, training curriculum
+
+Work Log:
+- Diagnosed webhook crash: 895-line route was crashing Turbopack
+- Rewrote webhook to 230 lines, extracted all logic to bot-engine.ts
+- Added safe() wrapper for all Telegram API calls - prevents server crashes
+- Fixed missing `export` keyword on POST handler (caused 405 errors)
+- Fixed `tgr()` typo → `tg()` in safe wrapper
+- Removed AI test from /status and /api (was causing server crash)
+- Implemented Universal Loop Coder curriculum (loop-training.ts)
+- Implemented /train_prompt with Hermes tier system (5 tiers, 20 prompts)
+- Implemented /loop [language] with 12 programming languages
+- Created Python auto-poller (bot-poll.py) that continuously polls Telegram
+- Set up Telegram bot menu with 19 commands
+- Verified ALL commands work: /start, /status, /models, /api, /loop, /loop python, /p1-/p12, /files, /clear
+
+Stage Summary:
+- Server stable, all 10+ tested commands return {"ok":true} without crashing
+- Auto-poller active, processing real Telegram updates
+- z.ai API working via SDK (no manual key needed)
+- Bot menu configured with 19 commands
+- Universal Loop Coder with 12 languages and 5 Hermes tiers implemented

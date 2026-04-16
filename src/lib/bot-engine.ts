@@ -1,7 +1,7 @@
 // Hermes Bot - Command handlers & business logic
 // Extracted from webhook/route.ts to keep the route file small
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, createReadStream } from 'fs';
 import { join, extname } from 'path';
 import { loadConfig, saveConfig } from '@/lib/config';
 import { callAI } from '@/lib/ai-engine';
@@ -59,8 +59,7 @@ export const OPENCODE_BIN = '/home/z/.npm-global/bin/opencode';
 
 const TEXT_EXTENSIONS = new Set(['.txt','.py','.js','.ts','.json','.md','.html','.css','.csv','.yml','.yaml','.xml','.sql','.log','.env','.java','.c','.cpp','.cs','.go','.rs','.tsx','.jsx','.sh','.bash','.zsh','.fish','.toml','.ini','.cfg','.conf','.rb','.php','.swift','.kt','.r','.lua','.pl','.ps1']);
 
-export function ensureDir(p: string) { if (!existsSync(p)) mkdirSyncRecursive(p); }
-function mkdirSyncRecursive(p: string) { try { require('fs').mkdirSync(p, { recursive: true }); } catch {} }
+export function ensureDir(p: string) { try { mkdirSync(p, { recursive: true }); } catch {} }
 
 export function getSessionPath(id: number) { ensureDir(SESSIONS_DIR); return join(SESSIONS_DIR, `${id}.json`); }
 export function loadSession(id: number) {
@@ -98,7 +97,6 @@ export async function sendDocument(token: string, chatId: number, filePath: stri
     const FormData = (await import('form-data')).default;
     const form = new FormData();
     form.append('chat_id', String(chatId));
-    const { createReadStream } = await import('fs');
     form.append('document', createReadStream(filePath), { filename: filePath.split('/').pop() });
     form.append('caption', caption);
     await fetch(`https://api.telegram.org/bot${token}/sendDocument`, {
@@ -196,6 +194,24 @@ export async function gitDeploy(repo: string): Promise<{ ok: boolean; msg: strin
   } catch (e: any) {
     return { ok: false, msg: `❌ Eroare: ${e.message}\nVerifică autentificarea Git.` };
   }
+}
+
+// ─── Expo scaffold ───
+export function scaffoldExpo(): { ok: boolean; msg: string } {
+  try {
+    ensureDir(EXPO_DIR); ensureDir(join(EXPO_DIR, 'assets'));
+    writeFileSync(join(EXPO_DIR, 'package.json'), JSON.stringify({
+      name: 'hermes-bot-control', version: '1.0.0', private: true,
+      main: 'node_modules/expo/AppEntry.js',
+      scripts: { start: 'expo start', android: 'expo start --android', ios: 'expo start --ios', web: 'expo start --web' },
+      dependencies: { expo: '~50.0.0', 'expo-status-bar': '~1.11.1', react: '18.2.0', 'react-native': '0.73.6', axios: '^1.6.8' }
+    }, null, 2), 'utf-8');
+    writeFileSync(join(EXPO_DIR, 'app.json'), JSON.stringify({
+      expo: { name: 'Hermes Bot Control', slug: 'hermes-control', version: '1.0.0', orientation: 'portrait', userInterfaceStyle: 'dark',
+        android: { package: 'com.hermes.botcontrol' }, ios: { bundleIdentifier: 'com.hermes.botcontrol' }, web: {} }
+    }, null, 2), 'utf-8');
+    return { ok: true, msg: `✅ Expo creat în ${EXPO_DIR}\ncd ${EXPO_DIR} && npm install && npx expo start` };
+  } catch (e: any) { return { ok: false, msg: `❌ ${e.message}` }; }
 }
 
 // ═══════════════════════════════════════════════
