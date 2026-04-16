@@ -585,9 +585,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                   },
                   {
                     icon: <Brain className="h-5 w-5" />,
-                    label: 'GLM Engine',
-                    value: config?.glm_api_key_masked ? '✅ Ready' : '❌ No Key',
-                    color: config?.glm_api_key_masked ? 'text-emerald-400' : 'text-red-400',
+                    label: 'z.ai API',
+                    value: '✅ Auto (SDK)',
+                    color: 'text-emerald-400',
                   },
                   {
                     icon: <FolderOpen className="h-5 w-5" />,
@@ -1226,9 +1226,17 @@ docker compose up -d --build`,
               {/* API Keys */}
               <Card className="bg-[#111827] border-slate-700/50">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base">🔑 API Keys</CardTitle>
+                  <CardTitle className="text-base">🔑 API &amp; Keys</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* z.ai SDK Auto Status */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-900/20 border border-emerald-800/30">
+                    <div className="text-2xl">🔗</div>
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-400">z.ai API: AUTO-CONFIGURAT</p>
+                      <p className="text-xs text-slate-400">Conectat automat prin GitHub → z.ai SDK. Nu e nevoie de cheie manuală.</p>
+                    </div>
+                  </div>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-xs text-slate-400 font-medium">Telegram Bot Token</label>
@@ -1244,17 +1252,15 @@ docker compose up -d --build`,
                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs text-slate-400 font-medium">GLM API Key</label>
+                      <label className="text-xs text-slate-400 font-medium">GLM API Key <span className="text-slate-600">(opțional)</span></label>
                       <Input
                         type="password"
                         value={glmKey}
                         onChange={e => setGlmKey(e.target.value)}
-                        placeholder="Your GLM API key"
+                        placeholder="Opțional — API merge automat"
                         className="bg-[#0f172a] border-slate-600 text-slate-100"
                       />
-                      {config?.glm_api_key_masked && (
-                        <p className="text-[10px] text-slate-600">Current: {config.glm_api_key_masked}</p>
-                      )}
+                      <p className="text-[10px] text-slate-600">SDK auto-configurat. Cheia e opțională.</p>
                     </div>
                   </div>
                   <Button

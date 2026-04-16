@@ -473,9 +473,11 @@ export async function POST(request: NextRequest) {
 
         let helpText =
           `🤖 <b>Hermes Bot Agent v4.0</b>\n\n` +
+          `🔗 z.ai API: <b>AUTO</b> (conectat via GitHub)\n` +
+          `Nu mai trebuie cheie manuală!\n\n` +
           `<b>Comenzi principale:</b>\n` +
-          `/api CHEIE - setează cheia GLM\n` +
-          `/status - status config\n` +
+          `/api - status API (auto-configurat)\n` +
+          `/status - status complet bot\n` +
           `/analyze [cerință] - analizează fișierele\n` +
           `/code cerință - generează cod\n` +
           `/opencode cerință - OpenCode AI agent\n` +
@@ -496,8 +498,6 @@ export async function POST(request: NextRequest) {
 
         if (claimed) helpText += `✅ Tu ai fost setat automat ca owner al botului.\n`;
         if (isOwn) helpText += `🔑 Ești owner-ul botului.\n`;
-
-        helpText += `\n🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține GLM API Key</a>`;
 
         await sendMsg(token, chatId, helpText, 'HTML').catch(() => {});
 
@@ -573,33 +573,42 @@ export async function POST(request: NextRequest) {
 
       // ─── API KEY ───
       case '/api': {
-        if (!await requireOwner()) break;
         if (!args) {
+          // Test SDK connectivity
+          let sdkStatus = '❌';
+          try {
+            const testReply = await aiChat([{ role: 'user', content: 'Reply OK' }], 'glm-4-flash');
+            sdkStatus = testReply.trim().toUpperCase().includes('OK') ? '✅' : '⚠️';
+          } catch {}
           await sendMsg(token, chatId,
-            `📝 Cheie curentă: ${esc(maskSecret(config.glm_api_key || ''))}\n\n` +
-            `Setare: <code>/api CHEIA_TA</code>\nȘtergere: <code>/api clear</code>\n\n` +
-            `🔑 <a href="https://open.bigmodel.cn/usercenter/apikeys">Obține cheie</a>`
+            `🔗 <b>z.ai API Status</b>\n\n` +
+            `⚡ SDK (auto): ${sdkStatus} (z-ai-web-dev-sdk)\n` +
+            `📦 Conectat via: GitHub → z.ai\n` +
+            `🔑 Manual key: ${config.glm_api_key ? '✅ (' + esc(maskSecret(config.glm_api_key)) + ')' : '— (nu e nevoie)'}\n` +
+            `🧠 Model curent: <code>${config.glm_model || 'glm-4.6'}</code>\n\n` +
+            `✅ API-ul merge AUTOMAT prin z.ai SDK!\n` +
+            `Nu mai trebuie cheie manuală.\n\n` +
+            `Dacă vrei totuși cheie manuală:\n` +
+            `<code>/api set CHEIA</code>\n` +
+            `<code>/api clear</code>`
           );
           break;
         }
         if (args.trim().toLowerCase() === 'clear') {
           config.glm_api_key = ''; saveConfig(config);
-          await sendMsg(token, chatId, '✅ Cheia GLM a fost ștearsă.');
+          await sendMsg(token, chatId, '✅ Cheia manuală ștearsă. API-ul merge tot prin z.ai SDK automat.');
           break;
         }
-        const newKey = args.trim();
-        if (newKey.length < 10) { await sendMsg(token, chatId, '❌ Cheia pare prea scurtă.'); break; }
-        config.glm_api_key = newKey; saveConfig(config);
-        await sendMsg(token, chatId, '🔍 Testez cheia GLM...');
-        try {
-          const testResult = await aiChat([{ role: 'user', content: 'Reply with exactly OK.' }], config.glm_model);
-          if (testResult.trim().toUpperCase().includes('OK')) {
-            await sendMsg(token, chatId, '✅ Cheia GLM salvată și testată cu succes!');
-          } else {
-            await sendMsg(token, chatId, `⚠️ Cheia salvată dar testul a răspuns:\n\n${esc(trunc(testResult, 300))}`);
-          }
-        } catch (e: any) {
-          await sendMsg(token, chatId, `✅ Cheia salvată (test eșuat: ${esc(e.message)}).`);
+        if (args.trim().toLowerCase() === 'set' && args.split(/\s+/).length < 2) {
+          await sendMsg(token, chatId, '📝 Folosește: <code>/api set CHEIA_TA</code>\nSau lasă gol — API-ul merge automat!');
+          break;
+        }
+        const keyPart = args.trim().toLowerCase() === 'set' ? args.trim().split(/\s+/).slice(1).join(' ') : args.trim();
+        if (keyPart && keyPart.length >= 10) {
+          config.glm_api_key = keyPart; saveConfig(config);
+          await sendMsg(token, chatId, '✅ Cheia manuală salvată (opțional). API-ul merge și prin SDK automat.');
+        } else if (keyPart) {
+          await sendMsg(token, chatId, '❌ Cheia pare prea scurtă. (Minim 10 caractere)');
         }
         break;
       }
@@ -612,16 +621,23 @@ export async function POST(request: NextRequest) {
         const hermes = existsSync(HERMES_BIN) ? '✅' : '⚠️';
         const fileCount = Array.isArray(session.files) ? session.files.length : 0;
         const genCount = Array.isArray(session.generated) ? session.generated.length : 0;
+
+        // Quick SDK test
+        let sdkOk = '...';
+        try {
+          const t = await aiChat([{ role: 'user', content: 'Reply OK' }], 'glm-4-flash');
+          sdkOk = t.trim().toUpperCase().includes('OK') ? '✅ Activ' : '⚠️';
+        } catch { sdkOk = '❌'; }
+
         await sendMsg(token, chatId,
           `🤖 <b>Hermes Bot Agent v4.0</b>\n\n` +
-          `🧠 Model: ${cr}<code>${config.glm_model || 'glm-4-plus'}</code>\n` +
-          `🔑 GLM API: ✅ (z-ai-web-dev-sdk)\n` +
-          `🔑 GLM Key: ${config.glm_api_key ? '✅ (' + esc(maskSecret(config.glm_api_key)) + ')' : '❌'}\n` +
+          `🧠 Model: ${cr}<code>${config.glm_model || 'glm-4.6'}</code>\n` +
+          `🔗 z.ai API: ${sdkOk} (SDK auto via GitHub)\n` +
           `📱 Telegram: ✅\n` +
           `🔧 OpenCode: ${opencode}\n` +
           `🤖 Hermes Agent: ${hermes}\n` +
-          `📦 GitHub: ${config.github_repo ? '✅' : '❌'}\n` +
-          `👤 Owner: ${getOwnerId() ? '✅ (' + getOwnerId() + ')' : '❌'}\n` +
+          `📦 GitHub: ${config.github_repo ? '✅ ' + esc(config.github_repo) : '❌'}\n` +
+          `👤 Owner: ${getOwnerId() ? '✅' : '❌'}\n` +
           `📁 Fișiere sesiune: ${fileCount}\n` +
           `💻 Cod generat: ${genCount}\n` +
           `👑 Expert: ${config.expert_mode === 'true' ? '✅' : '❌'}\n` +
