@@ -158,6 +158,34 @@ export async function POST(request: NextRequest) {
             await tgEdit(m);
           }
         }
+      } else if (cb.startsWith('tool:')) {
+        const parts = cb.split(':');
+        if (parts[1] === 'cancel') { await tgEdit('❌ Închis.'); }
+        else if (parts.length === 3) {
+          const catDir = parts[1];
+          const toolName = parts[2];
+          const { existsSync, readdirSync, statSync } = await import('fs');
+          const { join } = await import('path');
+          const toolPath = join('/home/z/my-project/tools', catDir, toolName);
+          const isGit = existsSync(join(toolPath, '.git'));
+          let files = 0;
+          try { files = readdirSync(toolPath).filter(f => !f.startsWith('.')).length; } catch {}
+          let size = '';
+          try {
+            const { execSync } = await import('child_process');
+            const s = execSync(`du -sh ${toolPath} 2>/dev/null || echo "0"`).toString().trim().split('\t')[0];
+            size = s;
+          } catch {}
+          const catNames: Record<string, string> = { recon: '🔍 Recon', 'web-pentest': '🕸️ Web Pentest', scanner: '📡 Scanner', exploits: '💀 Exploits', osint: '🕵️ OSINT', network: '🌐 Network', 'ai-tools': '🧠 AI Tools' };
+          let m = `${catNames[catDir] || catDir}\n`;
+          m += `📦 <b>${esc(toolName)}</b>\n\n`;
+          m += `✅ Status: <code>${isGit ? 'Git Repo — READY' : 'Installed'}</code>\n`;
+          m += `📁 Files: <code>${files}</code>\n`;
+          m += `💾 Size: <code>${size || 'N/A'}</code>\n`;
+          m += `📂 Path: <code>${catDir}/${toolName}</code>\n\n`;
+          m += `🔗 Canal: <a href="https://t.me/WHOAMISecAI">t.me/WHOAMISecAI</a>`;
+          await tgEdit(m);
+        }
       }
       return NextResponse.json({ ok: true });
     }
@@ -215,6 +243,7 @@ export async function POST(request: NextRequest) {
         `/setrepo URL - setează repo\n` +
         `/deploy - push pe GitHub\n` +
         `/expo - proiect Expo\n` +
+        `/tools - Security Tools Arsenal (21+)\n` +
         `/clear - resetează sesiunea\n\n` +
         `<b>━━━ CO-PILOT (Agentic Searcher + Deep Thinking) ━━━</b>\n` +
         `/search query - Agentic Searcher\n` +
@@ -253,7 +282,7 @@ export async function POST(request: NextRequest) {
           ['/train', '/performance'],
           ['/analyze', '/files'],
           ['/model', '/endpoint'],
-          ['/deploy', '/expo'],
+          ['/deploy', '/expo', '/tools'],
           ['/clear'],
         ],
         resize_keyboard: true,
@@ -467,6 +496,62 @@ export async function POST(request: NextRequest) {
         await tgSend('📱 Expo... ⏳');
         const r = scaffoldExpo();
         await tgSend(r.msg);
+      }
+    }
+
+    // /tools — Security Tools Arsenal
+    else if (cmd === '/tools' || cmd === '/tool') {
+      const { existsSync, readdirSync } = await import('fs');
+      const { join } = await import('path');
+      const TOOLS_DIR = '/home/z/my-project/tools';
+      const CATEGORIES = [
+        { name: 'Recon', icon: '🔍', dir: 'recon' },
+        { name: 'Web Pentest', icon: '🕸️', dir: 'web-pentest' },
+        { name: 'Scanner', icon: '📡', dir: 'scanner' },
+        { name: 'Exploits', icon: '💀', dir: 'exploits' },
+        { name: 'OSINT', icon: '🕵️', dir: 'osint' },
+        { name: 'Network', icon: '🌐', dir: 'network' },
+        { name: 'AI Tools', icon: '🧠', dir: 'ai-tools' },
+      ];
+
+      const btns: any[] = [];
+      let total = 0;
+      let msg = '🔧 <b>Security Tools Arsenal — WHOAMISec AI</b>\n\n';
+
+      for (const cat of CATEGORIES) {
+        const catDir = join(TOOLS_DIR, cat.dir);
+        let catTools: string[] = [];
+        if (existsSync(catDir)) {
+          try {
+            const entries = readdirSync(catDir);
+            catTools = entries.filter(e => !e.startsWith('.') && existsSync(join(catDir, e)));
+          } catch {}
+        }
+        total += catTools.length;
+        if (catTools.length > 0) {
+          msg += `${cat.icon} <b>${cat.name}</b> (${catTools.length})\n`;
+          for (const t of catTools) {
+            msg += `  ✅ <code>${t}</code>\n`;
+          }
+          msg += '\n';
+          // Add inline buttons for each tool
+          for (const t of catTools) {
+            btns.push([{ text: `${cat.icon} ${t}`, callback_data: `tool:${cat.dir}:${t}` }]);
+          }
+        }
+      }
+
+      msg += `<b>Total: ${total} tools instalate</b>\n\n`;
+      msg += `<code>/tools recon</code> — detalii categorie\n`;
+      msg += `<code>/tools sqlmap</code> — detalii tool\n`;
+      msg += `🔗 Canal: <a href="https://t.me/WHOAMISecAI">t.me/WHOAMISecAI</a>`;
+
+      if (btns.length > 0) {
+        // Paginate buttons — max 10 at a time
+        btns.push([{ text: '❌ Închide', callback_data: 'tool:cancel' }]);
+        await tgKb(msg, { inline_keyboard: btns.slice(0, 11) });
+      } else {
+        await tgSend(msg);
       }
     }
 
