@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (cmd === '/start' || cmd === '/help') {
       const cl = maybeClaimOwner(userId || 0);
       await tgKb(
-        `🤖 <b>Hermes Bot v4.0</b>\n\n` +
+        `💀 <b>WHOAMISec AI v4.0</b>\n\n` +
         `🔗 z.ai API: <b>AUTO</b> (SDK)\n` +
         `🧠 Model: <code>${cm}</code>\n\n` +
         `<b>Loop Coder:</b>\n/languages /patterns /spark\n/loop /tiers /curriculum\n/performance /best_practices\n\n` +
@@ -142,8 +142,8 @@ export async function POST(request: NextRequest) {
     else if (cmd === '/status') {
       const s = loadSession(chatId);
       await tgSend(
-        `🤖 <b>Hermes Bot v4.0</b>\n🧠 <code>${cm}</code>\n🔗 z.ai: ✅ AUTO\n📱 TG: ✅\n` +
-        `🔧 OpenCode: ${existsSync(OPENCODE_BIN) ? '✅' : '⚠️'}\n🤖 Hermes: ${existsSync(HERMES_BIN) ? '✅' : '⚠️'}\n` +
+        `💀 <b>WHOAMISec AI v4.0</b>\n🧠 <code>${cm}</code>\n🔗 z.ai: ✅ AUTO\n📱 TG: ✅\n` +
+        `🔧 OpenCode: ${existsSync(OPENCODE_BIN) ? '✅' : '⚠️'}\n🤖 AI Agent: ${existsSync(HERMES_BIN) ? '✅' : '⚠️'}\n` +
         `📦 GitHub: ${config.github_repo ? '✅' : '❌'}\n👤 Owner: ${getOwnerId() ? '✅' : '❌'}\n` +
         `📁 ${s.files?.length || 0} files | 💻 ${s.generated?.length || 0} gen\n🧬 Train: ${s.train_prompts || 0}/50\n` +
         `🌍 ${LOOP_LANGUAGES.length} limbi | ⚡ ${HERMES_TIERS.length} tiers | 🔴 RED TEAM`
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
       }
     }
     else if (cmd === '/opencode') { if (!args) { await tgSend('<code>/opencode cerință</code>'); } else { await tgSend('🔧 ⏳'); try { await tgSendLong(`🔧 ${await callOpenCode(args)}`); } catch { await tgSendLong(`🔧 ${await aiChat([{ role: 'system', content: DEFAULT_PROMPT + ' OpenCode AI.' }, { role: 'user', content: args }], cm)}`); } } }
-    else if (cmd === '/hermes') { if (!args) { await tgSend('<code>/hermes cerință</code>'); } else { await tgSend('🤖 ⏳'); try { await tgSendLong(`🤖 ${await callHermes(args)}`); } catch { await tgSendLong(`🤖 ${await aiChat([{ role: 'system', content: 'Ești HERMES Agent Nous Research.' }, { role: 'user', content: args }], cm)}`); } } }
+    else if (cmd === '/hermes') { if (!args) { await tgSend('<code>/hermes cerință</code>'); } else { await tgSend('🤖 ⏳'); try { await tgSendLong(`🤖 ${await callHermes(args)}`); } catch { await tgSendLong(`🤖 ${await aiChat([{ role: 'system', content: 'Ești WHOAMISec AI Agent.' }, { role: 'user', content: args }], cm)}`); } } }
     else if (cmd === '/files') { const s = loadSession(chatId); ensureDir(DOWNLOADS_DIR); const sf = Array.isArray(s.files) ? s.files : []; const sg = Array.isArray(s.generated) ? s.generated : []; if (!sf.length && !sg.length) { await tgSend('📂 Gol.'); } else { let m = '📂\n'; if (sf.length) { m += '📥 Upload:\n'; for (const f of sf.slice(-10)) m += `• ${esc(f.name)}\n`; } if (sg.length) { m += '💻 Gen:\n'; for (const f of sg.slice(-10)) m += `• ${esc(f)}\n`; } await tgSend(m); } }
     else if (cmd === '/clear') { saveSess(chatId, { history: [], train_prompts: 0, agent_model: cm, files: [], generated: [], context: '' }); await tgSend('🧹 Reset!'); }
     else if (cmd === '/deploy') { if (!own()) { await tgSend('⛔'); } else if (!config.github_repo) { await tgSend('❌ /setrepo'); } else { await tgSend('🚀 ⏳'); const r = await gitDeploy(config.github_repo); await tgSend(r.msg); } }
@@ -229,4 +229,4 @@ export async function POST(request: NextRequest) {
   } catch (e) { console.error('[webhook]', e); return NextResponse.json({ ok: true }); }
 }
 
-export async function GET() { return NextResponse.json({ status: 'Hermes Bot Active', version: '4.0', models: 19 }); }
+export async function GET() { return NextResponse.json({ status: 'WHOAMISec AI Active', version: '4.0', models: 19 }); }
