@@ -625,54 +625,8 @@ function LandingPage({ onAdminClick }: { onAdminClick: () => void }) {
         </div>
       </section>
 
-      {/* ═══ SECURITY TOOLS SECTION ═══ */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 py-12">
-        <div className="text-center mb-8">
-          <h3 className="text-2xl font-bold mb-2">
-            <span className="bg-gradient-to-r from-red-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
-              {lang === 'ro' ? '🔧 Security Tools Arsenal' : '🔧 Security Tools Arsenal'}
-            </span>
-          </h3>
-          <p className="text-slate-400 text-sm">
-            {lang === 'ro'
-              ? '21+ instrumente de securitate instalate. Recon, Pentest, Scanner, Exploits, OSINT, Network.'
-              : '21+ security tools installed. Recon, Pentest, Scanner, Exploits, OSINT, Network.'}
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { cat: 'recon', icon: '🔍', label: 'Recon', tools: ['theHarvester', 'recon-ng', 'Amass', 'Sublist3r', 'PhoneInfoga'], color: 'border-cyan-500/30 bg-cyan-500/5' },
-            { cat: 'web-pentest', icon: '🕸️', label: 'Web Pentest', tools: ['sqlmap', 'XSStrike', 'Nikto', 'dirsearch', 'Gobuster'], color: 'border-red-500/30 bg-red-500/5' },
-            { cat: 'scanner', icon: '📡', label: 'Scanner', tools: ['Nuclei', 'Masscan', 'Legba', 'wafw00f'], color: 'border-purple-500/30 bg-purple-500/5' },
-            { cat: 'exploits', icon: '💀', label: 'Exploits', tools: ['Volatility', 'Zphisher'], color: 'border-orange-500/30 bg-orange-500/5' },
-            { cat: 'osint', icon: '🕵️', label: 'OSINT', tools: ['Sherlock', 'Photon', 'GHunt'], color: 'border-emerald-500/30 bg-emerald-500/5' },
-            { cat: 'network', icon: '🌐', label: 'Network', tools: ['Scapy'], color: 'border-blue-500/30 bg-blue-500/5' },
-            { cat: 'ai-tools', icon: '🧠', label: 'AI Tools', tools: ['HackTricks'], color: 'border-indigo-500/30 bg-indigo-500/5' },
-          ].map((cat) => (
-            <div key={cat.cat} className={`rounded-xl border ${cat.color} p-4 hover:scale-[1.01] transition-transform`}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">{cat.icon}</span>
-                <h4 className="font-bold text-sm text-slate-200">{cat.label}</h4>
-                <span className="ml-auto text-[10px] text-slate-500 bg-slate-800/60 px-2 py-0.5 rounded-full">{cat.tools.length} tools</span>
-              </div>
-              <div className="space-y-1.5">
-                {cat.tools.map((tool) => (
-                  <div key={tool} className="flex items-center gap-2 text-xs">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-400 flex-shrink-0" />
-                    <span className="text-slate-300 font-medium">{tool}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="text-center mt-6">
-          <a href="https://t.me/idkebowbot" target="_blank" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 text-white text-sm font-semibold hover:from-red-500 hover:to-purple-500 transition-all">
-            <Terminal className="h-4 w-4" />
-            {lang === 'ro' ? 'Folosește Tools în Bot →' : 'Use Tools in Bot →'}
-          </a>
-        </div>
-      </section>
+      {/* ═══ SECURITY TOOLS SECTION — Dynamic from /api/tools-execute ═══ */}
+      <ToolsArsenalSection />
 
       {/* Subscriber Login Section */}
       <section className="relative z-10 max-w-md mx-auto px-6 py-12">
@@ -1822,6 +1776,211 @@ function SubscriberManager({ addLog }: { addLog: (type: LogEntry['type'], msg: s
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// DYNAMIC TOOLS ARSENAL SECTION
+// ═══════════════════════════════════════════════
+
+function ToolsArsenalSection() {
+  const [tools, setTools] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [selectedTool, setSelectedTool] = useState<any>(null);
+  const [terminalOutput, setTerminalOutput] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const terminalRef = useRef<HTMLPreElement>(null);
+
+  useEffect(() => {
+    fetch('/api/tools-execute')
+      .then(r => r.json())
+      .then(data => {
+        setTools(data.tools || []);
+        setCategories(data.categories || []);
+        setTotal(data.total || 0);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [terminalOutput]);
+
+  const handleRun = async (tool: any) => {
+    setSelectedTool(tool);
+    setTerminalOutput(`$ Running ${tool.name}...\n`);
+    setIsRunning(true);
+    try {
+      const res = await fetch('/api/tools-execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'run', category: tool.category, tool: tool.name }),
+      });
+      const data = await res.json();
+      setTerminalOutput(prev => prev + (data.output || data.error || 'No output') + `\n\n[Exit: ${data.ok ? 'OK' : 'ERR'}]`);
+    } catch (e: any) {
+      setTerminalOutput(prev => prev + `Error: ${e.message}\n`);
+    }
+    setIsRunning(false);
+  };
+
+  const handleInstall = async (tool: any) => {
+    setSelectedTool(tool);
+    setTerminalOutput(`$ Installing ${tool.name}...\n`);
+    setIsInstalling(true);
+    try {
+      const res = await fetch('/api/tools-execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'install', category: tool.category, tool: tool.name }),
+      });
+      const data = await res.json();
+      setTerminalOutput(prev => prev + (data.output || data.error || 'No output') + `\n\n[${data.message}]`);
+    } catch (e: any) {
+      setTerminalOutput(prev => prev + `Error: ${e.message}\n`);
+    }
+    setIsInstalling(false);
+  };
+
+  const filteredTools = activeCategory ? tools.filter(t => t.category === activeCategory) : tools;
+  const grouped = categories.map(cat => ({
+    ...cat,
+    tools: tools.filter(t => t.category === cat.dir),
+  }));
+
+  const langColor: Record<string, string> = {
+    python: 'text-yellow-400 bg-yellow-400/10',
+    go: 'text-cyan-400 bg-cyan-400/10',
+    js: 'text-green-400 bg-green-400/10',
+    ruby: 'text-red-400 bg-red-400/10',
+    bash: 'text-orange-400 bg-orange-400/10',
+    other: 'text-slate-400 bg-slate-400/10',
+  };
+
+  const catBorderColors: Record<string, string> = {
+    recon: 'border-cyan-500/30 bg-cyan-500/5 hover:border-cyan-400/50',
+    'web-pentest': 'border-red-500/30 bg-red-500/5 hover:border-red-400/50',
+    scanner: 'border-purple-500/30 bg-purple-500/5 hover:border-purple-400/50',
+    exploits: 'border-orange-500/30 bg-orange-500/5 hover:border-orange-400/50',
+    osint: 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-400/50',
+    network: 'border-blue-500/30 bg-blue-500/5 hover:border-blue-400/50',
+    'ai-tools': 'border-indigo-500/30 bg-indigo-500/5 hover:border-indigo-400/50',
+    crypto: 'border-amber-500/30 bg-amber-500/5 hover:border-amber-400/50',
+  };
+
+  return (
+    <section className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+      <div className="text-center mb-8">
+        <h3 className="text-2xl font-bold mb-2">
+          <span className="bg-gradient-to-r from-red-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+            🔧 Security Tools Arsenal
+          </span>
+        </h3>
+        <p className="text-slate-400 text-sm">
+          {loading ? 'Loading tools...' : `${total} security tools ready. Recon, Pentest, Scanner, Exploits, OSINT, Network, AI.`}
+        </p>
+      </div>
+
+      {/* Category filter buttons */}
+      <div className="flex flex-wrap justify-center gap-2 mb-6">
+        <button
+          onClick={() => setActiveCategory(null)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${!activeCategory ? 'bg-gradient-to-r from-red-600 to-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+        >
+          All ({total})
+        </button>
+        {categories.map(cat => (
+          <button
+            key={cat.dir}
+            onClick={() => setActiveCategory(activeCategory === cat.dir ? null : cat.dir)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeCategory === cat.dir ? 'bg-gradient-to-r from-red-600 to-purple-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+          >
+            {cat.icon} {cat.label} ({cat.count})
+          </button>
+        ))}
+      </div>
+
+      {/* Tools Grid */}
+      {loading ? (
+        <div className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin text-slate-500 mx-auto" /></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {filteredTools.map(tool => (
+            <div
+              key={`${tool.category}-${tool.name}`}
+              className={`rounded-xl border ${catBorderColors[tool.category] || 'border-slate-700/50 bg-slate-800/50'} p-3 transition-all hover:scale-[1.01] cursor-pointer group`}
+              onClick={() => setSelectedTool(tool)}
+            >
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <h4 className="font-bold text-sm text-slate-200 truncate">{tool.name}</h4>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${langColor[tool.lang]}`}>
+                  {tool.lang.toUpperCase()}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed mb-2 line-clamp-2">{tool.description}</p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleRun(tool); }}
+                  disabled={isRunning}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 text-[11px] font-medium hover:bg-emerald-600/30 transition-all disabled:opacity-50"
+                >
+                  {isRunning && selectedTool?.name === tool.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+                  RUN
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleInstall(tool); }}
+                  disabled={isInstalling || tool.installed}
+                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 text-[11px] font-medium hover:bg-blue-600/30 transition-all disabled:opacity-50"
+                >
+                  {isInstalling && selectedTool?.name === tool.name ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+                  {tool.installed ? 'READY' : 'Install'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Terminal Output Panel */}
+      {selectedTool && (
+        <div className="mt-6 rounded-xl border border-slate-700/50 bg-[#0d1117] overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-800/80 border-b border-slate-700/50">
+            <div className="flex items-center gap-2">
+              <Terminal className="h-4 w-4 text-emerald-400" />
+              <span className="text-sm font-medium text-slate-300">{selectedTool.name}</span>
+              <span className="text-[10px] text-slate-600">({selectedTool.category})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {(isRunning || isInstalling) && <span className="text-[10px] text-amber-400 animate-pulse">● Processing...</span>}
+              <button onClick={() => { setSelectedTool(null); setTerminalOutput(''); }} className="text-slate-500 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <pre
+            ref={terminalRef}
+            className="p-4 text-xs text-emerald-400 font-mono max-h-64 overflow-auto whitespace-pre-wrap break-all bg-[#0d1117]"
+          >
+            {terminalOutput || `> ${selectedTool.name} selected. Click RUN or Install.\n> Path: ${selectedTool.path}\n> Lang: ${selectedTool.lang}\n> Exec: ${selectedTool.executable}`}
+          </pre>
+        </div>
+      )}
+
+      {/* Bot link */}
+      <div className="text-center mt-6">
+        <a href="https://t.me/idkebowbot" target="_blank" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 text-white text-sm font-semibold hover:from-red-500 hover:to-purple-500 transition-all">
+          <Terminal className="h-4 w-4" />
+          Folosește Tools în Bot →
+        </a>
+      </div>
+    </section>
   );
 }
 
