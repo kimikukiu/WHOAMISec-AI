@@ -70,7 +70,7 @@ export function handleTiersMenu() {
   const btns = HERMES_TIERS.map((t, i) => [{ text: `${t.color} T${i + 1}: ${t.name}`, callback_data: `tier:${i}` }]);
   btns.push([{ text: '❌ Cancel', callback_data: 'tier:cancel' }]);
   return {
-    text: `🏆 <b>5 AI Tiers</b>\n\n` +
+    text: `🏆 <b>5 Hermes Tiers</b>\n\n` +
       HERMES_TIERS.map((t, i) => {
         const n = getPromptsForTier(i).length;
         return `${t.color} T${i + 1}: <b>${t.name}</b>\n🤖 ${t.model}\n🎯 ${t.focus}\n📚 ${n} prompts`;
@@ -91,7 +91,7 @@ export function handleTierDetail(tierIdx: number) {
 }
 
 export function handleCurriculum() {
-  let m = `📚 <b>Loop Coder — Curriculum Complet</b>\n\n`;
+  let m = `📚 <b>Loop Coder Hermes — Curriculum Complet</b>\n\n`;
   for (const t of HERMES_TIERS) m += `${t.color} <b>${t.name}</b> — ${t.model}\n`;
   m += '\n';
   for (let ti = 0; ti < HERMES_TIERS.length; ti++) {

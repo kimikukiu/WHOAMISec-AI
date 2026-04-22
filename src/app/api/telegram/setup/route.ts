@@ -3,7 +3,7 @@ import { loadConfig } from '@/lib/config';
 
 const ALL_COMMANDS = [
   { command: 'start', description: '🤖 Meniu complet + comenzi' },
-  { command: 'api', description: '🔗 Status API z.ai (auto)' },
+  { command: 'api', description: '🔗 Status API (auto)' },
   { command: 'status', description: '📊 Status complet bot' },
   { command: 'models', description: '🧠 Toate cele 19 modele' },
   { command: 'model', description: '🔄 Schimbă modelul AI' },
@@ -11,7 +11,8 @@ const ALL_COMMANDS = [
   { command: 'analyze', description: '🔍 Analizează fișierele' },
   { command: 'code', description: '💻 Generează cod' },
   { command: 'opencode', description: '🔧 OpenCode AI agent' },
-  { command: 'hermes', description: '🤖 AI Agent (self-improving)' },
+  { command: 'agent', description: '🤖 Agentic Coder AI (QuantumSwarm)' },
+  { command: 'hermes', description: '🤖 Agentic Coder (redirect)' },
   { command: 'files', description: '📂 Listează fișierele' },
   { command: 'setrepo', description: '📦 Setează repo GitHub' },
   { command: 'deploy', description: '🚀 Push pe GitHub' },
@@ -19,7 +20,7 @@ const ALL_COMMANDS = [
   { command: 'languages', description: '🌍 13 limbi Loop Coder' },
   { command: 'patterns', description: '⚡ 6 tipuri de loop patterns' },
   { command: 'spark', description: '🎯 Spark prompts per limbă' },
-  { command: 'tiers', description: '🏆 5 nivele AI tiers' },
+  { command: 'tiers', description: '🏆 5 nivele DeepMind tiers' },
   { command: 'curriculum', description: '📚 Curriculum complet 20 prompts' },
   { command: 'performance', description: '⚙️ Referință viteză loops' },
   { command: 'best_practices', description: '🎯 Bune practici curriculum' },
@@ -28,6 +29,16 @@ const ALL_COMMANDS = [
   { command: 'redteam', description: '🔴 RED TEAM safety testing' },
   { command: 'loop', description: '🔄 Exercițiu loop per limbă' },
   { command: 'clear', description: '🧹 Resetează sesiunea' },
+  { command: 'search', description: '🔍 Agentic Searcher' },
+  { command: 'think', description: '🧠 Deep Thinking' },
+  { command: 'copilot', description: '🤖 Full Co-Pilot' },
+  { command: 'deepmind', description: '🧬 WhoamisecDeepMind' },
+  { command: 'redgpt', description: '🔴 Red Team GPT' },
+  { command: 'admin', description: '🔐 Admin CPanel' },
+  { command: 'stats', description: '📊 Statistici sistem' },
+  { command: 'subscribers', description: '👥 Lista subscribers' },
+  { command: 'gen', description: '🎟️ Genereaza token' },
+  { command: 'revoke', description: '❌ Revoca token' },
 ];
 
 export async function POST(request: NextRequest) {
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        short_description: '💀 WHOAMISec AI v4.0 - AI Coding Agent cu 19 modele, Loop Coder 13 limbi, RED TEAM testing. /start',
+        short_description: '🤖 WHOAMISec AI — QuantumSwarm 999999999 · 19 modele AI · Loop Coder 13 limbi · RED TEAM · Co-Pilot. /start',
       }),
     });
 

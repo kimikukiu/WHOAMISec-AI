@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WHOAMISec AI v4.0 - Admin Control Panel",
-  description: "WHOAMISec AI - QuantumSwarm Intelligence Engine. Telegram bot control, GLM AI engine, deployment management.",
+  title: "WHOAMISec AI — Agentic Coding Platform",
+  description: "WHOAMISec AI — Platformă AI completă cu 19+ modele, coding agentic, Red Team testing, Loop Coder, QuantumSwarm Intelligence.",
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💀</text></svg>",
+    icon: "/whoamisec-logo.jpg",
   },
 };
 

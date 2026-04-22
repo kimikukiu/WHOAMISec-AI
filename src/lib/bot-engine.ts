@@ -1,18 +1,22 @@
-// Hermes Bot - Command handlers & business logic
+// Agentic Coder Command handlers & business logic
 // Extracted from webhook/route.ts to keep the route file small
+// ALL models respond as Agentic Coder in QuantumSwarm 999999999 mode
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, createReadStream } from 'fs';
 import { join, extname } from 'path';
 import { loadConfig, saveConfig } from '@/lib/config';
 import { callAI } from '@/lib/ai-engine';
+import { QUANTUM_SWARM_MASTER_PROMPT, ALL_SKILLS, SKILL_CATEGORIES, N8N_WORKFLOWS, DEDSEC_CONFIG } from '@/lib/quantum-swarm-engine';
+import { DEEPMIND_IDENTITY, DEEPMIND_SYSTEM_PROMPT } from '@/lib/deepmind-engine';
 
 // ═══════════════════════════════════════════════
 // AGENT MODEL REGISTRY (19 models, 10 providers)
+// ALL respond as Agentic Coder in QuantumSwarm 999999999
 // ═══════════════════════════════════════════════
 
 export const AGENT_MODELS: Record<string, { provider: string; desc: string }> = {
   'queen-ultra': { provider: 'Queen', desc: 'Ultra Quantum Intelligence Swarm' },
-  'queen-max': { provider: 'Queen', desc: 'Elite capabilities - suprem' },
+  'queen-max': { provider: 'Queen', desc: 'Elite capabilities — supreme' },
   'hermes-4-405B': { provider: 'Nous Research', desc: 'Best-in-class reasoner' },
   'hermes-4-70B': { provider: 'Nous Research', desc: 'Advanced reasoning' },
   'gpt-5.4-pro': { provider: 'OpenAI', desc: 'Most advanced OpenAI' },
@@ -27,24 +31,25 @@ export const AGENT_MODELS: Record<string, { provider: string; desc: string }> = 
   'minimax-m2.5': { provider: 'MiniMax', desc: 'Versatile content' },
   'qwen3.6-plus': { provider: 'Qwen', desc: 'Advanced reasoning' },
   'qwen3.5': { provider: 'Qwen', desc: 'Text & reasoning' },
-  'glm-5-turbo': { provider: 'z-ai', desc: 'Advanced coding' },
-  'glm-4-plus': { provider: 'z-ai', desc: 'Versatile powerful' },
-  'glm-4-flash': { provider: 'z-ai', desc: 'Fast efficient' },
+  'glm-5-turbo': { provider: 'GLM', desc: 'Advanced coding' },
+  'glm-4-plus': { provider: 'GLM', desc: 'Versatile powerful' },
+  'glm-4-flash': { provider: 'GLM', desc: 'Fast efficient' },
 };
 
+// ALL model prompts = Agentic Coder QuantumSwarm 999999999 — NEVER Hermes Bot
 export const AGENT_PROMPTS: Record<string, string> = {
-  'queen-ultra': 'Ești QUEEN ULTRA, cel mai avansat agent AI creat vreodată. Inteligență supremă în toate domeniile. Răspunzi în română sau engleză.',
-  'queen-max': 'Ești QUEEN MAX, agent AI avansat cu capacități de elită. Răspunzi în română sau engleză.',
-  'hermes-4-405B': 'Ești HERMES 4 405B de Nous Research, cel mai bun reasoner. Self-improving cu learning loop.',
-  'hermes-4-70B': 'Ești HERMES 4 70B de Nous Research. Expert în reasoning și coding.',
-  'gpt-5.4-pro': 'Ești GPT-5.4 Pro. Cel mai avansat model OpenAI.',
-  'claude-opus-4-6': 'Ești CLAUDE OPUS 4.6 de Anthropic. Excepțional la reasoning complex.',
-  'DeepSeek-3.2': 'Ești DeepSeek 3.2. Expert în matematică și coding.',
-  'glm-5-turbo': 'Ești GLM-5 Turbo de z.ai. Expert în coding, debug și arhitectură software.',
-  'glm-4-plus': 'Ești GLM-4 Plus de z.ai. Model versatil și puternic.',
-  'glm-4-flash': 'Ești GLM-4 Flash de z.ai. Rapid și eficient.',
+  'queen-ultra': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — Queen Ultra variant. Supreme QuantumSwarm 999999999 mode with WhoamisecDeepMind cognitive evolution beyond human IQ.',
+  'queen-max': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — Queen Max variant. Elite QuantumSwarm 999999999 mode.',
+  'hermes-4-405B': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — best-in-class reasoner with QuantumSwarm 999999999 training and WhoamisecDeepMind evolution.',
+  'hermes-4-70B': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — advanced reasoning with QuantumSwarm 999999999 training.',
+  'gpt-5.4-pro': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — most advanced with QuantumSwarm 999999999 training.',
+  'claude-opus-4-6': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — most powerful Claude with QuantumSwarm 999999999 training.',
+  'DeepSeek-3.2': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — math/coding expert with QuantumSwarm 999999999 training.',
+  'glm-5-turbo': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — advanced coding with QuantumSwarm 999999999 training.',
+  'glm-4-plus': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — versatile model with QuantumSwarm 999999999 training.',
+  'glm-4-flash': DEEPMIND_SYSTEM_PROMPT + '\n\nYou are Agentic Coder — fast model with QuantumSwarm 999999999 training.',
 };
-export const DEFAULT_PROMPT = 'Ești HERMES BOT v4.0, agent AI avansat multi-model. Expert în programare, AI, securitate, DevOps. Răspunzi în română sau engleză.';
+export const DEFAULT_PROMPT = DEEPMIND_SYSTEM_PROMPT;
 
 // ═══════════════════════════════════════════════
 // CONSTANTS
@@ -188,7 +193,7 @@ export async function gitDeploy(repo: string): Promise<{ ok: boolean; msg: strin
     await run('git', ['remote', 'add', 'origin', repo]);
     await run('git', ['add', '.']);
     const ts = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    await run('git', ['commit', '-m', `Hermes auto deploy ${ts}`, '--allow-empty']);
+    await run('git', ['commit', '-m', `Agentic Coder auto deploy ${ts}`, '--allow-empty']);
     const out = await run('git', ['push', '-u', 'origin', 'main', '--force']);
     return { ok: true, msg: `✅ Push reușit către ${repo}\n${trunc(out, 500)}` };
   } catch (e: any) {
@@ -201,14 +206,14 @@ export function scaffoldExpo(): { ok: boolean; msg: string } {
   try {
     ensureDir(EXPO_DIR); ensureDir(join(EXPO_DIR, 'assets'));
     writeFileSync(join(EXPO_DIR, 'package.json'), JSON.stringify({
-      name: 'hermes-bot-control', version: '1.0.0', private: true,
+      name: 'agentic-coder-control', version: '1.0.0', private: true,
       main: 'node_modules/expo/AppEntry.js',
       scripts: { start: 'expo start', android: 'expo start --android', ios: 'expo start --ios', web: 'expo start --web' },
       dependencies: { expo: '~50.0.0', 'expo-status-bar': '~1.11.1', react: '18.2.0', 'react-native': '0.73.6', axios: '^1.6.8' }
     }, null, 2), 'utf-8');
     writeFileSync(join(EXPO_DIR, 'app.json'), JSON.stringify({
-      expo: { name: 'Hermes Bot Control', slug: 'hermes-control', version: '1.0.0', orientation: 'portrait', userInterfaceStyle: 'dark',
-        android: { package: 'com.hermes.botcontrol' }, ios: { bundleIdentifier: 'com.hermes.botcontrol' }, web: {} }
+      expo: { name: 'Agentic Coder Control', slug: 'agentic-coder-control', version: '1.0.0', orientation: 'portrait', userInterfaceStyle: 'dark',
+        android: { package: 'com.agentic.codercontrol' }, ios: { bundleIdentifier: 'com.agentic.codercontrol' }, web: {} }
     }, null, 2), 'utf-8');
     return { ok: true, msg: `✅ Expo creat în ${EXPO_DIR}\ncd ${EXPO_DIR} && npm install && npx expo start` };
   } catch (e: any) { return { ok: false, msg: `❌ ${e.message}` }; }
