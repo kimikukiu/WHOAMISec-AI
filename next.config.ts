@@ -10,7 +10,16 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     '*': ['./tools/**', './data/sessions/**', './downloads/**', './generated_code/**'],
   },
-  turbopack: {},
+  turbopack: {
+    root: '/home/z/my-project',
+    resolveAlias: {
+      '~@/': './src/',
+    },
+  },
+  webpack: (config, { isServer }) => {
+    config.resolve.alias['~@/'] = '/home/z/my-project/src/';
+    return config;
+  },
 };
 
 export default nextConfig;
