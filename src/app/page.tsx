@@ -365,75 +365,27 @@ function LandingPage({ onAdminClick }: { onAdminClick: () => void }) {
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-slate-100 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 50 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              width: `${1 + Math.random() * 2}px`,
-              height: `${1 + Math.random() * 2}px`,
-              background: i % 3 === 0 ? 'rgba(99,102,241,0.3)' : i % 3 === 1 ? 'rgba(6,182,212,0.2)' : 'rgba(168,85,247,0.2)',
-              animation: `floatParticle ${4 + Math.random() * 8}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 10}s`,
-            }}
-          />
-        ))}
-      </div>
-      {/* Neural DNA Background — subtle sliding neural network */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03]">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="dnaGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#6366f1', stopOpacity: 0.5 }} />
-              <stop offset="100%" style={{ stopColor: '#06b6d4', stopOpacity: 0.5 }} />
-            </linearGradient>
-            <linearGradient id="dnaGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#a855f7', stopOpacity: 0.4 }} />
-              <stop offset="100%" style={{ stopColor: '#6366f1', stopOpacity: 0.4 }} />
-            </linearGradient>
-          </defs>
-          {/* DNA Helix Strands */}
-          <g style={{ animation: 'dnaSlide 60s linear infinite' }}>
-            {Array.from({ length: 20 }).map((_, i) => {
-              const y1 = (i * 80) + Math.sin(i * 0.5) * 30;
-              const y2 = (i * 80) + Math.cos(i * 0.5) * 30;
-              const cx = ((i * 120) % (typeof window !== 'undefined' ? window.innerWidth : 1920));
-              return (
-                <g key={`dna-${i}`}>
-                  <circle cx={cx} cy={y1} r="3" fill="url(#dnaGrad1)" />
-                  <circle cx={cx + 200} cy={y2} r="3" fill="url(#dnaGrad2)" />
-                  <line x1={cx} y1={y1} x2={cx + 200} y2={y2} stroke="url(#dnaGrad1)" strokeWidth="0.5" opacity="0.4" />
-                  {Array.from({ length: 3 }).map((_, j) => (
-                    <circle key={`n-${i}-${j}`} cx={cx + 60 + j * 40} cy={(y1 + y2) / 2 + (j - 1) * 8} r="1.5" fill="url(#dnaGrad2)" opacity="0.3" />
-                  ))}
-                </g>
-              );
-            })}
-          </g>
-          {/* Neural network connections */}
-          <g style={{ animation: 'neuralPulse 30s linear infinite' }}>
-            {Array.from({ length: 30 }).map((_, i) => {
-              const x = (i * 150) % 1920;
-              const y = (i * 200) % 1080;
-              return (
-                <g key={`neural-${i}`}>
-                  <circle cx={x} cy={y} r="2" fill="url(#dnaGrad1)" opacity="0.6" />
-                  {i < 29 && <line x1={x} y1={y} x2={((i + 1) * 150) % 1920} y2={((i + 1) * 200) % 1080} stroke="url(#dnaGrad1)" strokeWidth="0.3" opacity="0.2" />}
-                  {i > 0 && <line x1={x} y1={y} x2={((i - 1) * 150 + 100) % 1920} y2={((i - 1) * 200 + 150) % 1080} stroke="url(#dnaGrad2)" strokeWidth="0.3" opacity="0.15" />}
-                </g>
-              );
-            })}
-          </g>
-        </svg>
+      {/* ═══ MEMBRANE BACKGROUND — background.png with luminous animation ═══ */}
+      <div className="fixed inset-0 z-0">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat membrane-pulse"
+          style={{ backgroundImage: 'url(/background.png)', opacity: 0.85 }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e1a]/70 via-[#0a0e1a]/50 to-[#0a0e1a]/80" />
       </div>
       <style jsx>{`
-        @keyframes floatParticle {
-          0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
-          50% { transform: translateY(-80px) translateX(40px); opacity: 0.6; }
+        @keyframes membrane-pulse {
+          0%, 100% { filter: brightness(1) saturate(1); transform: scale(1); }
+          25% { filter: brightness(1.15) saturate(1.2); transform: scale(1.02); }
+          50% { filter: brightness(1.3) saturate(1.4); transform: scale(1.04); }
+          75% { filter: brightness(1.1) saturate(1.1); transform: scale(1.01); }
+        }
+        @keyframes membrane-glow {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.6; }
+        }
+        .membrane-pulse {
+          animation: membrane-pulse 8s ease-in-out infinite;
         }
         @keyframes pulse-glow {
           0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.3); }
@@ -443,22 +395,10 @@ function LandingPage({ onAdminClick }: { onAdminClick: () => void }) {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes typeCursor {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-        @keyframes dnaSlide {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes neuralPulse {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.6; }
-        }
       `}</style>
 
       {/* Navigation Bar */}
-      <nav className="relative z-10 border-b border-slate-800/50 bg-[#0a0e1a]/80 backdrop-blur-md">
+      <nav className="relative z-10 border-b border-slate-800/30 bg-[#0a0e1a]/40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Image src="/whoamisec-logo.jpg" alt="WHOAMISec AI" width={42} height={42} className="rounded-lg" />
@@ -682,6 +622,55 @@ function LandingPage({ onAdminClick }: { onAdminClick: () => void }) {
               </div>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ═══ SECURITY TOOLS SECTION ═══ */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        <div className="text-center mb-8">
+          <h3 className="text-2xl font-bold mb-2">
+            <span className="bg-gradient-to-r from-red-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              {lang === 'ro' ? '🔧 Security Tools Arsenal' : '🔧 Security Tools Arsenal'}
+            </span>
+          </h3>
+          <p className="text-slate-400 text-sm">
+            {lang === 'ro'
+              ? '21+ instrumente de securitate instalate. Recon, Pentest, Scanner, Exploits, OSINT, Network.'
+              : '21+ security tools installed. Recon, Pentest, Scanner, Exploits, OSINT, Network.'}
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { cat: 'recon', icon: '🔍', label: 'Recon', tools: ['theHarvester', 'recon-ng', 'Amass', 'Sublist3r', 'PhoneInfoga'], color: 'border-cyan-500/30 bg-cyan-500/5' },
+            { cat: 'web-pentest', icon: '🕸️', label: 'Web Pentest', tools: ['sqlmap', 'XSStrike', 'Nikto', 'dirsearch', 'Gobuster'], color: 'border-red-500/30 bg-red-500/5' },
+            { cat: 'scanner', icon: '📡', label: 'Scanner', tools: ['Nuclei', 'Masscan', 'Legba', 'wafw00f'], color: 'border-purple-500/30 bg-purple-500/5' },
+            { cat: 'exploits', icon: '💀', label: 'Exploits', tools: ['Volatility', 'Zphisher'], color: 'border-orange-500/30 bg-orange-500/5' },
+            { cat: 'osint', icon: '🕵️', label: 'OSINT', tools: ['Sherlock', 'Photon', 'GHunt'], color: 'border-emerald-500/30 bg-emerald-500/5' },
+            { cat: 'network', icon: '🌐', label: 'Network', tools: ['Scapy'], color: 'border-blue-500/30 bg-blue-500/5' },
+            { cat: 'ai-tools', icon: '🧠', label: 'AI Tools', tools: ['HackTricks'], color: 'border-indigo-500/30 bg-indigo-500/5' },
+          ].map((cat) => (
+            <div key={cat.cat} className={`rounded-xl border ${cat.color} p-4 hover:scale-[1.01] transition-transform`}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">{cat.icon}</span>
+                <h4 className="font-bold text-sm text-slate-200">{cat.label}</h4>
+                <span className="ml-auto text-[10px] text-slate-500 bg-slate-800/60 px-2 py-0.5 rounded-full">{cat.tools.length} tools</span>
+              </div>
+              <div className="space-y-1.5">
+                {cat.tools.map((tool) => (
+                  <div key={tool} className="flex items-center gap-2 text-xs">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+                    <span className="text-slate-300 font-medium">{tool}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="text-center mt-6">
+          <a href="https://t.me/idkebowbot" target="_blank" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-purple-600 text-white text-sm font-semibold hover:from-red-500 hover:to-purple-500 transition-all">
+            <Terminal className="h-4 w-4" />
+            {lang === 'ro' ? 'Folosește Tools în Bot →' : 'Use Tools in Bot →'}
+          </a>
         </div>
       </section>
 
