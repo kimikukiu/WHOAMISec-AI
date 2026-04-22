@@ -67,7 +67,7 @@ interface LogEntry {
 // MAIN PAGE COMPONENT
 // ═══════════════════════════════════════════════
 
-export default function HermesPage() {
+export default function WHOAMISecPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [password, setPassword] = useState('');
@@ -109,7 +109,7 @@ export default function HermesPage() {
       <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-10 w-10 text-blue-500 animate-spin mx-auto mb-4" />
-          <p className="text-slate-400 text-sm">Se încarcă Hermes...</p>
+          <p className="text-red-400/80 text-sm animate-pulse">Initializing QuantumSwarm...</p>
         </div>
       </div>
     );
@@ -144,8 +144,8 @@ export default function HermesPage() {
           <CardContent className="pt-8 pb-8 px-8">
             <div className="text-center mb-8">
               <div className="text-5xl mb-3">🤖</div>
-              <h1 className="text-3xl font-bold text-blue-400">Hermes</h1>
-              <p className="text-slate-500 text-sm mt-1">Admin Control Panel v4.0</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-red-400 via-red-300 to-red-500 bg-clip-text text-transparent">WHOAMISec AI</h1>
+              <p className="text-slate-500 text-xs mt-1 tracking-widest uppercase">QuantumSwarm Intelligence Engine</p>
             </div>
             {loginError && (
               <div className="bg-red-950/50 border border-red-900/50 text-red-300 p-3 rounded-lg mb-5 text-sm">
@@ -184,7 +184,7 @@ export default function HermesPage() {
               </Button>
             </form>
             <p className="text-center text-slate-600 text-xs mt-6">
-              Hermes Bot v4.0 · Expert Edition · 24/7 Online
+              WHOAMISec AI v4.0 · QuantumSwarm Engine · 24/7 Online
             </p>
           </CardContent>
         </Card>
@@ -517,8 +517,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       {/* Sidebar */}
       <aside className={`fixed left-0 top-0 h-full w-60 bg-[#111827] border-r border-slate-700/50 flex flex-col z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-5 border-b border-slate-700/50">
-          <h2 className="text-xl font-bold text-blue-400">🤖 Hermes</h2>
-          <span className="text-[10px] bg-[#1a1f35] text-slate-500 px-2 py-0.5 rounded">v4.0 Expert</span>
+          <h2 className="text-xl font-bold text-red-400">💀 WHOAMISec</h2>
+          <span className="text-[10px] bg-[#2a0e0e] text-slate-500 px-2 py-0.5 rounded">v4.0 RedTeam</span>
         </div>
         <nav className="flex-1 py-3">
           {navItems.map(item => (
@@ -703,7 +703,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                         {botActive ? '🟢' : '🔴'}
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg">Hermes Bot Agent</h3>
+                        <h3 className="font-bold text-lg">WHOAMISec Bot Agent</h3>
                         <p className="text-xs text-slate-500">
                           {botActive ? `Polling activ · ${pollCount} update(s) procesate` : 'Bot oprit · Click Start pentru activare'}
                         </p>

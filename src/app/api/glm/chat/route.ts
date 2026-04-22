@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (memory) capabilities.push('context memory retention');
     if (cots !== false) capabilities.push('coherent thought structure');
     if (capabilities.length > 0) systemPrompt += `\n\nActive agent capabilities: ${capabilities.join(', ')}.`;
-    systemPrompt += '\n\nYou are HERMES BOT v4.0 Expert Edition powered by OpenCode + Hermes Agent. You can operate in multiple modes: coding, analysis, creative writing, problem solving, and conversation.';
+    systemPrompt += '\n\nYou are WHOAMISec AI v4.0 QuantumSwarm Engine. You can operate in multiple modes: coding, analysis, creative writing, problem solving, security research, and conversation.';
 
     // Use shared AI engine (z-ai-web-dev-sdk via dynamic import)
     try {

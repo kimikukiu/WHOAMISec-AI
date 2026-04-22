@@ -11,7 +11,7 @@ const ALL_COMMANDS = [
   { command: 'analyze', description: '🔍 Analizează fișierele' },
   { command: 'code', description: '💻 Generează cod' },
   { command: 'opencode', description: '🔧 OpenCode AI agent' },
-  { command: 'hermes', description: '🤖 Hermes Agent (self-improving)' },
+  { command: 'hermes', description: '🤖 AI Agent (self-improving)' },
   { command: 'files', description: '📂 Listează fișierele' },
   { command: 'setrepo', description: '📦 Setează repo GitHub' },
   { command: 'deploy', description: '🚀 Push pe GitHub' },
@@ -19,7 +19,7 @@ const ALL_COMMANDS = [
   { command: 'languages', description: '🌍 13 limbi Loop Coder' },
   { command: 'patterns', description: '⚡ 6 tipuri de loop patterns' },
   { command: 'spark', description: '🎯 Spark prompts per limbă' },
-  { command: 'tiers', description: '🏆 5 nivele Hermes tiers' },
+  { command: 'tiers', description: '🏆 5 nivele AI tiers' },
   { command: 'curriculum', description: '📚 Curriculum complet 20 prompts' },
   { command: 'performance', description: '⚙️ Referință viteză loops' },
   { command: 'best_practices', description: '🎯 Bune practici curriculum' },
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        short_description: '🤖 Hermes Bot v4.0 - AI Coding Agent cu 19 modele, Loop Coder 13 limbi, RED TEAM testing. /start',
+        short_description: '💀 WHOAMISec AI v4.0 - AI Coding Agent cu 19 modele, Loop Coder 13 limbi, RED TEAM testing. /start',
       }),
     });
 
