@@ -1,0 +1,9 @@
+{
+  "name": "manus-core",
+  "version": "1.0.0",
+  "description": "Manus Autonomous Agent Core - Based on Deep Manus Blueprint",
+  "main": "index.ts",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.61.2"
+  }
+}

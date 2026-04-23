@@ -5,7 +5,8 @@
  */
 
 import TelegramBot from 'node-telegram-bot-api';
-import { providerManager } from './providers/manager';
+import { providerManager } from './providers/provider-manager';
+import { wormGPTArsenal, logger, wormHttp, schedule } from './wormgpt-complete';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8248107818:AAGysZMySSGZp8VhOSL-fjB91p05cdU8MKA';
 const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || '7966587808';
@@ -87,6 +88,142 @@ export class WHOAMISecAITelegramBot {
           { parse_mode: 'Markdown' }
         );
       }, 2000);
+    });
+
+    // ==========================================
+    // WORMGPT COMMANDS - ALL EXPLOITS
+    // ==========================================
+    
+    // Main WormGPT Menu
+    this.bot.onText(/\/wormgpt$/, (msg) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const menu = `
+💀 **WormGPT Complete Arsenal** 💀
+
+**Available Exploits:**
+• /cve_2025_29824 <target> - CLFS Driver EoP (Windows)
+• /cve_2025_5777 <target> - CitrixBleed 2 (NetScaler)
+• /cve_2026_2441 <target> - Chrome CSS RCE
+
+**Burp Suite Techniques:**
+• /burp <target> - Full Burp Suite automation
+• /burp_intruder <target> - Cluster bomb attack
+
+**Tools:**
+• /wormgpt_http <url> - WormHTTP client test
+• /wormgpt_schedule - Test scheduler
+
+**WARNING: Use only on authorized systems!**
+      `;
+      this.bot.sendMessage(msg.chat.id, menu, { parse_mode: 'Markdown' });
+    });
+
+    // CVE-2025-29824 - CLFS Driver Exploit
+    this.bot.onText(/\/cve_2025_29824 (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const target = match?.[1];
+      if (!target) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /cve_2025_29824 <target_ip>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `💀 **CVE-2025-29824** - CLFS Driver EoP\n\n🎯 Target: ${target}\n⚡ Status: ARMED\n\nInitializing exploit chain...`, { parse_mode: 'Markdown' });
+      
+      try {
+        const result = wormGPTArsenal.cve_2025_29824_clfs_exploit(target);
+        this.bot.sendMessage(msg.chat.id, `✅ **Exploit Ready**\n\n${JSON.stringify(result, null, 2).substring(0, 500)}...`, { parse_mode: 'Markdown' });
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+      }
+    });
+
+    // CVE-2025-5777 - CitrixBleed 2
+    this.bot.onText(/\/cve_2025_5777 (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const target = match?.[1];
+      if (!target) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /cve_2025_5777 <target_url>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `💀 **CVE-2025-5777** - CitrixBleed 2\n\n🎯 Target: ${target}\n⚡ Status: ARMED\n\nExtracting session tokens...`, { parse_mode: 'Markdown' });
+      
+      try {
+        const result = wormGPTArsenal.cve_2025_5777_citrixbleed2(target);
+        this.bot.sendMessage(msg.chat.id, `✅ **Exploit Ready**\n\nCitrixBleed 2 exploit code generated for: ${target}`);
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+      }
+    });
+
+    // CVE-2026-2441 - Chrome CSS RCE
+    this.bot.onText(/\/cve_2026_2441 (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const target = match?.[1];
+      if (!target) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /cve_2026_2441 <target_url>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `💀 **CVE-2026-2441** - Chrome CSS RCE\n\n🎯 Target: ${target}\n⚡ Status: ARMED\n\nGenerating payloads...`, { parse_mode: 'Markdown' });
+      
+      try {
+        const result = wormGPTArsenal.cve_2026_2441_chrome_rce(target);
+        this.bot.sendMessage(msg.chat.id, `✅ **Exploit Ready**\n\n${JSON.stringify(result, null, 2).substring(0, 500)}...`, { parse_mode: 'Markdown' });
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+      }
+    });
+
+    // Burp Suite Techniques
+    this.bot.onText(/\/burp (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const target = match?.[1];
+      if (!target) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /burp <target_url>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `🔥 **Burp Suite Automation**\n\n🎯 Target: ${target}\n⚡ Running cluster bomb attack...`, { parse_mode: 'Markdown' });
+      
+      try {
+        const result = wormGPTArsenal.burp_intruder_attack(target, 'cluster_bomb');
+        this.bot.sendMessage(msg.chat.id, `✅ **Burp Complete**\n\n${JSON.stringify(result, null, 2).substring(0, 500)}...`, { parse_mode: 'Markdown' });
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ Burp error: ${error}`);
+      }
+    });
+
+    // WormHTTP Test
+    this.bot.onText(/\/wormgpt_http (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const url = match?.[1];
+      if (!url) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /wormgpt_http <url>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `🌐 **WormHTTP Test**\n\nTarget: ${url}\nSending request...`, { parse_mode: 'Markdown' });
+      
+      try {
+        const response = await wormHttp.get(url);
+        this.bot.sendMessage(msg.chat.id, `✅ **Response Received**\n\nLength: ${response.length} bytes\n\n${response.substring(0, 200)}...`);
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ HTTP error: ${error}`);
+      }
+    });
+
+    // Test Scheduler
+    this.bot.onText(/\/wormgpt_schedule$/, (msg) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      
+      schedule.every(5).seconds().do(() => {
+        logger.info('[WormGPT] Scheduled task executed!');
+      });
+      
+      this.bot.sendMessage(msg.chat.id, `⏰ **WormGPT Scheduler**\n\n✅ Scheduled task every 5 seconds\nUse /wormgpt_stop to stop`, { parse_mode: 'Markdown' });
+      
+      schedule.start();
     });
   }
 
