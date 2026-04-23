@@ -260,6 +260,11 @@ export const ALL_MODELS: AIModel[] = [
   { id: 'thinking-32B', name: 'Thinking 32B', provider: 'Thinking', category: 'reasoning', description: 'Deep thinking', icon: '💭' },
   { id: 'thought-3', name: 'Thought 3', provider: 'Thought', category: 'reasoning', description: 'Complex reasoning', icon: '💭' },
 
+  // ━━━ KILOCODE ━━━
+  { id: 'kilo-auto/free', name: 'Kilo-auto/Free', provider: 'Kilocode', category: 'free', description: 'Free tier with 256K context', icon: '🔥' },
+  { id: 'kilo-auto', name: 'Kilo-auto', provider: 'Kilocode', category: 'standard', description: 'High context model', icon: '🔥' },
+  { id: 'kilo-pro', name: 'Kilo-pro', provider: 'Kilocode', category: 'premium', description: 'Pro tier with max context', icon: '🔥' },
+
   // ━━━ SWARM MODELS (from swarm-models/ folder) ━━━
   { id: 'glm5turbo-swarm', name: 'GLM-5 Turbo SWARM', provider: 'SWARM', category: 'swarm', description: 'GLM-5 Turbo with QuantumSwarm injection', icon: '🪱' },
   { id: 'actai-swarm', name: 'ActAI SWARM', provider: 'SWARM', category: 'swarm', description: 'ActAI with autonomous swarm', icon: '⚡' },

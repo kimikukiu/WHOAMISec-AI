@@ -9,6 +9,7 @@ import { GitHubModelsProvider, createGitHubModelsProvider } from './github-model
 import { GroqProvider, createGroqProvider } from './groq';
 import { TogetherProvider, createTogetherProvider } from './together';
 import { HuggingFaceProvider, createHuggingFaceProvider } from './huggingface';
+import { KilocodeProvider, createKilocodeProvider } from './kilocode';
 
 export interface ProviderStatus {
   name: string;
@@ -45,6 +46,18 @@ export class ProviderManager {
   }
 
   private registerDefaultProviders() {
+    // 0. Kilocode (FREE - 256K context window!)
+    try {
+      const kilocodeProvider = createKilocodeProvider();
+      this.registerProvider('kilocode', kilocodeProvider, {
+        name: 'kilocode',
+        enabled: true,
+        priority: 0, // Highest priority (free + 256K context!)
+      });
+    } catch (error) {
+      console.warn('[ProviderManager] Kilocode not available:', error);
+    }
+
     // 1. GitHub Models (FREE - uses GitHub token)
     try {
       const githubProvider = createGitHubModelsProvider();
