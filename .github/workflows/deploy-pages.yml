@@ -23,26 +23,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
           
       - name: Install dependencies
-        run: npm install --legacy-peer-deps || npm install
+        run: npm install || npm install --legacy-peer-deps || echo "No package.json"
         
       - name: Build project
-        run: npm run build || echo "No build script, serving static"
+        run: npm run build || echo "No build script"
         
-      - name: Prepare for deployment
-        run: |
-          if [ -d "dist" ]; then
-            echo "Using dist/ folder"
-            cp -r dist/* . 2>/dev/null || true
-          elif [ -d "build" ]; then
-            echo "Using build/ folder"
-            cp -r build/* . 2>/dev/null || true
-          else
-            echo "No build output, serving from root"
-          fi
-          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
