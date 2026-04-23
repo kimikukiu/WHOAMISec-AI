@@ -1,9 +1,35 @@
 {
-  "name": "manus-core",
-  "version": "1.0.0",
-  "description": "Manus Autonomous Agent Core - Based on Deep Manus Blueprint",
+  "name": "manus-super-fast",
+  "version": "2.0.0",
+  "description": "Machine-speed implementation of all Manus capabilities",
   "main": "index.ts",
-  "dependencies": {
-    "node-telegram-bot-api": "^0.61.2"
+  "capabilities": {
+    "agent_loop": true,
+    "tools": [
+      "image",
+      "exec",
+      "info",
+      "zip",
+      "view",
+      "web-static",
+      "music-prompter",
+      "github-gem-seeker",
+      "web-db-user",
+      "shell"
+    ],
+    "cves": [
+      "CVE-2024-53691",
+      "CVE-2019-0193",
+      "CVE-2024-25600",
+      "CVE-2022-46169",
+      "CVE-2026-22794",
+      "CVE-2025-43300",
+      "CVE-2020-35728",
+      "CVE-2025-5777",
+      "CVE-2018-1335",
+      "CVE-2026-2441"
+    ],
+    "self_repair": true,
+    "machine_speed": true
   }
 }
