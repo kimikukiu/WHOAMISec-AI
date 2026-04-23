@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build || echo 'No build script'",
+  "outputDirectory": ".",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
