@@ -1,0 +1,203 @@
+for our project wich will depend on==>
+
+=> http://openrouter.ai
+key api unlimited
+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
+
+Read https://openrouter.ai/skills/create-agent/SKILL.md and follow the instructions to build an agent using OpenRouter.
+
+
+Using the OpenRouter SDK (Beta)
+First, install the SDK:
+
+npm install @openrouter/sdk
+or
+yarn add @openrouter/sdk
+
+
+Then use it in your code:
+
+import { OpenRouter } from '@openrouter/sdk';
+
+const openRouter = new OpenRouter({
+  apiKey: '<OPENROUTER_API_KEY>',
+  defaultHeaders: {
+    'HTTP-Referer': '<YOUR_SITE_URL>', // Optional. Site URL for rankings on openrouter.ai.
+    'X-OpenRouter-Title': '<YOUR_SITE_NAME>', // Optional. Site title for rankings on openrouter.ai.
+  },
+});
+
+const completion = await openRouter.chat.send({
+  model: 'openai/gpt-5.2',
+  messages: [
+    {
+      role: 'user',
+      content: 'What is the meaning of life?',
+    },
+  ],
+  stream: false,
+});
+
+console.log(completion.choices[0].message.content);
+
+
+
+Using the OpenRouter API directly
+You can use the interactive Request Builder to generate OpenRouter API requests in the language of your choice.
+
+
+
+import requests
+import json
+
+response = requests.post(
+  url="https://openrouter.ai/api/v1/chat/completions",
+  headers={
+    "Authorization": "Bearer <OPENROUTER_API_KEY>",
+    "HTTP-Referer": "<YOUR_SITE_URL>", # Optional. Site URL for rankings on openrouter.ai.
+    "X-OpenRouter-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
+  },
+  data=json.dumps({
+    "model": "openai/gpt-5.2", # Optional
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the meaning of life?"
+      }
+    ]
+  })
+)
+
+
+or typescript wich is better for apk
+
+fetch('https://openrouter.ai/api/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    Authorization: 'Bearer <OPENROUTER_API_KEY>',
+    'HTTP-Referer': '<YOUR_SITE_URL>', // Optional. Site URL for rankings on openrouter.ai.
+    'X-OpenRouter-Title': '<YOUR_SITE_NAME>', // Optional. Site title for rankings on openrouter.ai.
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    model: 'openai/gpt-5.2',
+    messages: [
+      {
+        role: 'user',
+        content: 'What is the meaning of life?',
+      },
+    ],
+  }),
+});
+
+
+Using the OpenAI SDK
+
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: '<OPENROUTER_API_KEY>',
+  defaultHeaders: {
+    'HTTP-Referer': '<YOUR_SITE_URL>', // Optional. Site URL for rankings on openrouter.ai.
+    'X-OpenRouter-Title': '<YOUR_SITE_NAME>', // Optional. Site title for rankings on openrouter.ai.
+  },
+});
+
+async function main() {
+  const completion = await openai.chat.completions.create({
+    model: 'openai/gpt-5.2',
+    messages: [
+      {
+        role: 'user',
+        content: 'What is the meaning of life?',
+      },
+    ],
+  });
+
+  console.log(completion.choices[0].message);
+}
+
+main();
+
+
+
+
+Model Selection
+Select one or more models. Additional models will be used as fallbacks.
+
+
+typescrypt for apk
+
+const url = "https://openrouter.ai/api/v1/chat/completions";
+  const headers = {
+      "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json"
+  };
+  const payload = {
+"models": [
+  "nvidia/nemotron-3-super-120b-a12b",
+  "openai/gpt-5.4-pro",
+  "x-ai/grok-4.20-multi-agent-beta",
+  "openrouter/hunter-alpha",
+  "bytedance-seed/seed-2.0-lite",
+  "qwen/qwen3.5-9b",
+  "inception/mercury-2",
+  "google/gemini-3.1-flash-lite-preview",
+  "liquid/lfm-2-24b-a2b",
+  "anthropic/claude-sonnet-4.6",
+  "minimax/minimax-m2.5",
+  "z-ai/glm-5",
+  "openrouter/free",
+  "moonshotai/kimi-k2.5"
+],
+"messages": [
+  {
+    "role": "user",
+    "content": "If you built the world's tallest skyscraper, what would you name it?"
+  }
+],
+"stream": true
+};
+
+  const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+  });
+
+  const data = await response.json();
+  console.log(data);
+  
+  
+  python but optional
+
+
+curl https://openrouter.ai/api/v1/chat/completions \
+  -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "models": [
+        "nvidia/nemotron-3-super-120b-a12b",
+        "openai/gpt-5.4-pro",
+        "x-ai/grok-4.20-multi-agent-beta",
+        "openrouter/hunter-alpha",
+        "bytedance-seed/seed-2.0-lite",
+        "qwen/qwen3.5-9b",
+        "inception/mercury-2",
+        "google/gemini-3.1-flash-lite-preview",
+        "liquid/lfm-2-24b-a2b",
+        "anthropic/claude-sonnet-4.6",
+        "minimax/minimax-m2.5",
+        "z-ai/glm-5",
+        "openrouter/free",
+        "moonshotai/kimi-k2.5"
+    ],
+    "messages": [
+        {
+            "role": "user",
+            "content": "If you built the world'\''s tallest skyscraper, what would you name it?"
+        }
+    ],
+    "stream": true
+}'
