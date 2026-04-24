@@ -11,14 +11,16 @@ permissions:
   id-token: write
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
       - run: npm install --legacy-peer-deps
+        shell: bash
       
       - run: npm run build
+        shell: bash
       
       - uses: actions/configure-pages@v4
       
