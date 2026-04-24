@@ -16,16 +16,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - run: npm install --legacy-peer-deps
-        shell: bash
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
       
-      - run: npm run build
-        shell: bash
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
       
-      - uses: actions/configure-pages@v4
+      - name: Build
+        run: npm run build
       
-      - uses: actions/upload-pages-artifact@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: './dist/public'
       
-      - uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
