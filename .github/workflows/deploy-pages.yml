@@ -16,14 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: npm
+      - name: Install
+        run: cd ${{ github.workspace }} && npm install --legacy-peer-deps
       
-      - run: npm install --legacy-peer-deps
-      
-      - run: npm run build
+      - name: Build
+        run: cd ${{ github.workspace }} && npm run build
       
       - uses: actions/configure-pages@v4
       
