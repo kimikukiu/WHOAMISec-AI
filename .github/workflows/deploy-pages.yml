@@ -19,7 +19,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
       
       - run: npm install --legacy-peer-deps
       
@@ -29,6 +28,6 @@ jobs:
       
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './dist/public'
       
       - uses: actions/deploy-pages@v4
