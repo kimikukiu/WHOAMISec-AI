@@ -1032,6 +1032,32 @@ async function handleCommand(chatId: number, userId: number | undefined, text: s
     saveFsrs(chatId, []);
     await sendMsg(chatId, '🧠 FSRS resetat!');
   }
+  // /wormgpt - WormGPT Arsenal access
+  else if (cmd === '/wormgpt' || cmd === '/worm') {
+    await sendMsg(chatId, `💀 <b>WormGPT Arsenal</b> 🔥\n\nAvailable exploits:\n- CVE-2025-29824: Windows CLFS Driver LPE\n- CVE-2025-5777: CitrixBleed 2 Memory Overread\n- CVE-2026-2441: Chrome CSS RCE\n\nUse <code>/cve &lt;CVE-ID&gt;</code> to get exploit details.`);
+  }
+  // /cve - CVE exploit details
+  else if (cmd === '/cve') {
+    if (!args) {
+      await sendMsg(chatId, `🔍 <b>CVE Exploit Search</b>\n\nUsage: <code>/cve CVE-2025-29824</code>\n\nAvailable CVEs:\n- CVE-2016-5385: cURL SSRF\n- CVE-2017-5638: Apache Struts OGNL RCE\n- CVE-2018-1000861: Jenkins SSRF\n- CVE-2025-29824: Windows CLFS LPE\n- CVE-2025-5777: CitrixBleed 2\n- CVE-2026-2441: Chrome CSS RCE`);
+      return;
+    }
+    const cveId = args.toUpperCase();
+    // Check if CVE exists in our database
+    const cveMap = {
+      'CVE-2025-29824': 'Windows CLFS Driver Use-After-Free → SYSTEM privileges',
+      'CVE-2025-5777': 'Citrix NetScaler Memory Overread → Session Token Leak',
+      'CVE-2026-2441': 'Chrome CSS Type Confusion → RCE via Renderer',
+      'CVE-2016-5385': 'cURL URL Parsing Ambiguity → SSRF',
+      'CVE-2017-5638': 'Apache Struts OGNL Injection → RCE',
+      'CVE-2018-1000861': 'Jenkins Plugin Resource Loading → SSRF'
+    };
+    if (cveMap[cveId]) {
+      await sendMsg(chatId, `🔓 <b>${cveId}</b>\n\n${cveMap[cveId]}\n\nExploit code available in <code>/repo/WormGPT-Arsenal</code>`);
+    } else {
+      await sendMsg(chatId, `❌ CVE <code>${esc(cveId)}</code> not found in arsenal. Use /cve to list available.`);
+    }
+  }
   // Unknown command
   else if (text.startsWith('/')) {
     await sendMsg(chatId, `❓ Necunoscut: <code>${esc(cmd)}</code>\n/start pentru meniu.`);
